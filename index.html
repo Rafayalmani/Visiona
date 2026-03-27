@@ -927,7 +927,7 @@ function generateImage() {
   loadingPrompt.textContent = '"' + prompt + '"';
   disableBtn('Generating…');
 
-  const url = `${IMAGE_API_BASE}/${encodeURIComponent(prompt)}?model=flux&width=1024&height=1024&seed=${Math.floor(Math.random()*99999)}&enhance=false&key=${API_KEY}`;
+  const url = `${IMAGE_API_BASE}/${encodeURIComponent(prompt)}?model=zimage&width=1024&height=1024&seed=${Math.floor(Math.random()*99999)}&enhance=false&key=${API_KEY}`;
 
   generatedImg.classList.remove('loaded');
   generatedImg.src = '';
