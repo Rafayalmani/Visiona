@@ -1283,124 +1283,12 @@ window.addEventListener("resize", () => {
         renderHistory();
       })();
 
-<<<<<<< HEAD
       /* ══════════════════════════════
    SESSIONS
 ══════════════════════════════ */
       function save() {
         localStorage.setItem(STORE_KEY, JSON.stringify(sessions));
         localStorage.setItem(CUR_KEY, currentId || "");
-=======
-// ─── GENERATE IMAGE ───────────────────────────────────────
-function generateImage() {
-  const prompt = promptInput.value.trim();
-  if (!prompt) { bounce(); return; }
-
-  lastPrompt = prompt;
-  startTime  = Date.now();
-  if (currentBlobUrl) { URL.revokeObjectURL(currentBlobUrl); currentBlobUrl = null; }
-
-  setPanel('loading');
-  loadingPrompt.textContent = '"' + prompt + '"';
-  disableBtn('Generating…');
-
-  const url = `${IMAGE_API_BASE}/${encodeURIComponent(prompt)}?model=zimage&width=1024&height=1024&seed=${Math.floor(Math.random()*99999)}&enhance=false&key=${API_KEY}`;
-
-  generatedImg.classList.remove('loaded');
-  generatedImg.src = '';
-
-  generatedImg.onload = function () {
-    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-    metaPrompt.textContent = '"' + prompt + '"';
-    metaTime.textContent   = elapsed + 's';
-    setTimeout(() => generatedImg.classList.add('loaded'), 50);
-    setPanel('result-image');
-    resetBtn();
-    showToast('✨ Image generated!');
-  };
-
-  generatedImg.onerror = function () {
-    setPanel('error');
-    document.getElementById('errorTitle').textContent = 'Image generation failed';
-    document.getElementById('errorSub').textContent   = 'Check your prompt and try again.';
-    resetBtn();
-  };
-
-  generatedImg.src = url;
-}
-
-// ─── GENERATE TEXT ────────────────────────────────────────
-async function generateText() {
-  const prompt = promptInput.value.trim();
-  if (!prompt) { bounce(); return; }
-
-  lastPrompt = prompt;
-  startTime  = Date.now();
-
-  setPanel('loading');
-  loadingPrompt.textContent = '"' + prompt + '"';
-  disableBtn('Writing…');
-
-  try {
-    // Pollinations text API: GET https://text.pollinations.ai/{prompt}?model=nova-fast
-    const url = `${TEXT_API_BASE}${encodeURIComponent(prompt)}?model=nova-fast&seed=${Math.floor(Math.random()*99999)}&enhance=false&key=${API_KEY}`;
-
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('API error ' + res.status);
-
-    const text = await res.text();
-    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-
-    generatedText = text;
-
-    // Animate text appearing
-    setPanel('result-text');
-    textMetaPrompt.textContent = '"' + prompt + '"';
-    textMetaTime.textContent   = elapsed + 's';
-
-    await typeText(text);
-
-    const wc = text.trim().split(/\s+/).length;
-    textWordCount.textContent = wc + ' words';
-
-    resetBtn();
-    showToast('');
-
-  } catch (err) {
-    setPanel('error');
-    document.getElementById('errorTitle').textContent = 'too many request';
-    document.getElementById('errorSub').textContent   = err.message || 'Please try again.';
-    resetBtn();
-  }
-}
-
-// ─── TYPE ANIMATION ───────────────────────────────────────
-function typeText(text) {
-  return new Promise(resolve => {
-    textOutput.textContent = '';
-    textCursor.classList.remove('hidden');
-
-    // For long texts, skip animation and show instantly
-    if (text.length > 1200) {
-      textOutput.textContent = text;
-      textCursor.classList.add('hidden');
-      resolve();
-      return;
-    }
-
-    let i = 0;
-    const chunkSize = 4; // chars per frame
-    const delay = 12;    // ms between chunks
-
-    function step() {
-      if (i < text.length) {
-        textOutput.textContent += text.slice(i, i + chunkSize);
-        i += chunkSize;
-        setTimeout(step, delay);
-      } else {
-        textCursor.classList.add('hidden');
-        resolve();
->>>>>>> 69d57f2fa0694cd8b5f538185160e611b1b99a62
       }
 
       function newChat() {
