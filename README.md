@@ -26,10 +26,7 @@ Icons: Custom SVG & Unicode Glyphs.
 📥 Installation & Setup
 Clone the repository:
 
-Bash
-git clone https://github.com/Rafayalmani/visiona.git
-Open the project:
-Simply open index.html in any modern web browser.
+
 
 API Configuration:
 Open the script section in index.html and ensure your API_KEY is set:
