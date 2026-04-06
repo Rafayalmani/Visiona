@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PixelForge — AI Image Studio</title>
+    <title>PixelForge</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -11,7 +11,7 @@
       rel="stylesheet"
     />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <style>
+   <style>
       :root {
         --bg: #050508;
         --bg1: #0a0a10;
@@ -24,7 +24,7 @@
         --text2: #8888a0;
         --text3: #55556a;
         --accent: #7c6af7;
-        --accent2:#7c6af7;
+        --accent2: #7c6af7;
         --accent-glow: rgba(124, 106, 247, 0.3);
         --green: #34d399;
         --red: #f87171;
@@ -298,6 +298,7 @@
         display: flex;
         align-items: center;
         gap: 12px;
+        flex-wrap: wrap;
       }
       .topbar-title {
         font-family: var(--font-head);
@@ -364,7 +365,7 @@
         border: 1px solid var(--border2);
         border-radius: 16px;
         padding: 8px;
-        min-width: 260px;
+        min-width: 280px;
         z-index: 200;
         box-shadow:
           0 20px 60px rgba(0, 0, 0, 0.6),
@@ -747,6 +748,7 @@
         align-items: center;
         gap: 8px;
         border-bottom: 1px solid var(--border);
+        flex-wrap: wrap;
       }
       .ai-img-header .model-tag {
         font-size: 11px;
@@ -1149,6 +1151,25 @@
         transform: translateX(-50%) translateY(0);
       }
 
+      /* ========== RESPONSIVE BREAKPOINTS ========== */
+
+      /* Tablet Landscape (max-width: 1024px) */
+      @media (max-width: 1024px) {
+        #chat-inner {
+          max-width: 720px;
+          padding: 0 24px;
+        }
+        
+        .msg-bubble {
+          max-width: 80%;
+        }
+        
+        .msg-row.user .msg-bubble {
+          max-width: 65%;
+        }
+      }
+
+      /* Tablet Portrait (max-width: 768px) */
       @media (max-width: 768px) {
         #sidebar {
           position: fixed;
@@ -1157,33 +1178,627 @@
           bottom: 0;
           z-index: 50;
           transform: translateX(-100%);
+          width: 280px;
         }
+        
         #sidebar.mobile-open {
           transform: translateX(0);
         }
+        
         #sidebar-overlay {
           display: none;
         }
+        
         #sidebar-overlay.show {
           display: block;
         }
+        
         #hamburger {
           display: grid;
         }
-        #chat-inner {
-          padding: 0 16px;
-        }
-        #input-area {
-          padding: 12px 16px 16px;
-        }
+        
         #topbar {
           padding: 12px 16px;
         }
+        
+        .topbar-left {
+          gap: 8px;
+        }
+        
+        .topbar-title {
+          font-size: 13px;
+        }
+        
+        .topbar-sub {
+          font-size: 10px;
+        }
+        
+        .model-pill {
+          padding: 4px 10px;
+          font-size: 11px;
+        }
+        
+        .topbar-btn {
+          padding: 5px 8px;
+          font-size: 11px;
+        }
+        
+        .topbar-btn span {
+          display: none;
+        }
+        
+        .topbar-btn svg {
+          margin: 0;
+        }
+        
+        #chat-area {
+          padding: 20px 0;
+        }
+        
+        #chat-inner {
+          padding: 0 16px;
+          gap: 20px;
+        }
+        
+        .msg-avatar {
+          width: 28px;
+          height: 28px;
+          font-size: 11px;
+        }
+        
+        .msg-bubble {
+          max-width: 85%;
+        }
+        
+        .msg-row.user .msg-bubble {
+          max-width: 75%;
+        }
+        
+        .user-bubble {
+          padding: 10px 14px;
+          font-size: 13.5px;
+        }
+        
+        .empty-title {
+          font-size: 24px;
+        }
+        
+        .empty-sub {
+          font-size: 13px;
+          padding: 0 16px;
+        }
+        
         .suggestions-grid {
           grid-template-columns: 1fr;
+          gap: 8px;
+          max-width: 100%;
+          padding: 0 16px;
         }
+        
+        .suggestion-card {
+          padding: 12px 14px;
+        }
+        
+        .suggestion-card .s-title {
+          font-size: 12px;
+        }
+        
+        .suggestion-card .s-sub {
+          font-size: 11px;
+        }
+        
+        #input-area {
+          padding: 12px 16px 16px;
+        }
+        
+        .input-box {
+          padding: 10px 12px;
+          gap: 8px;
+        }
+        
+        #prompt-input {
+          font-size: 13.5px;
+        }
+        
+        .enhance-btn {
+          padding: 6px 10px;
+          font-size: 11px;
+        }
+        
+        .enhance-btn span {
+          display: none;
+        }
+        
+        .enhance-btn svg {
+          margin: 0;
+        }
+        
+        .send-btn {
+          width: 36px;
+          height: 36px;
+        }
+        
+        .send-btn svg {
+          width: 15px;
+          height: 15px;
+        }
+        
+        .quick-style {
+          padding: 3px 8px;
+          font-size: 10px;
+        }
+        
+        .input-hint {
+          font-size: 9px;
+        }
+        
+        .input-footer {
+          gap: 4px;
+        }
+        
+        .model-dropdown {
+          min-width: 260px;
+          right: -50px;
+        }
+        
+        #settings-panel {
+          width: 280px;
+        }
+      }
+
+      /* Mobile Large (max-width: 480px) */
+      @media (max-width: 480px) {
+        #sidebar {
+          width: 260px;
+        }
+        
+        .sidebar-top {
+          padding: 16px 16px 12px;
+        }
+        
+        .logo-icon {
+          width: 30px;
+          height: 30px;
+        }
+        
+        .logo-text {
+          font-size: 14px;
+        }
+        
+        .logo-badge {
+          font-size: 7px;
+          padding: 1px 4px;
+        }
+        
+        .new-chat-btn {
+          padding: 8px 12px;
+          font-size: 12px;
+          margin: 10px 0 0;
+        }
+        
+        .new-chat-btn svg {
+          width: 13px;
+          height: 13px;
+        }
+        
+        .sidebar-section-label {
+          padding: 12px 16px 4px;
+          font-size: 9px;
+        }
+        
+        .history-item {
+          padding: 8px 10px;
+          font-size: 12px;
+        }
+        
+        .history-item svg {
+          width: 11px;
+          height: 11px;
+        }
+        
+        .sidebar-bottom {
+          padding: 12px 8px;
+        }
+        
+        .settings-btn {
+          padding: 8px 10px;
+          font-size: 12px;
+        }
+        
+        #topbar {
+          padding: 10px 12px;
+        }
+        
+        .topbar-left {
+          gap: 6px;
+        }
+        
+        .topbar-title {
+          font-size: 12px;
+        }
+        
+        .topbar-sub {
+          display: none;
+        }
+        
+        .model-pill {
+          padding: 3px 8px;
+          font-size: 10px;
+          gap: 4px;
+        }
+        
+        .model-dot {
+          width: 5px;
+          height: 5px;
+        }
+        
+        .model-pill .chevron {
+          width: 10px;
+          height: 10px;
+        }
+        
+        .topbar-actions {
+          gap: 4px;
+        }
+        
+        .topbar-btn {
+          padding: 5px 7px;
+        }
+        
+        #chat-inner {
+          padding: 0 12px;
+          gap: 16px;
+        }
+        
+        .msg-avatar {
+          width: 24px;
+          height: 24px;
+          font-size: 10px;
+        }
+        
+        .msg-bubble {
+          max-width: 88%;
+        }
+        
+        .msg-row.user .msg-bubble {
+          max-width: 82%;
+        }
+        
+        .user-bubble {
+          padding: 8px 12px;
+          font-size: 12.5px;
+        }
+        
+        .typing-bubble {
+          padding: 12px 16px;
+        }
+        
+        .typing-dot {
+          width: 6px;
+          height: 6px;
+        }
+        
+        .ai-img-header {
+          padding: 8px 12px;
+        }
+        
+        .ai-img-header .model-tag {
+          font-size: 10px;
+        }
+        
+        .ai-img-footer {
+          padding: 8px 12px;
+          gap: 6px;
+        }
+        
+        .action-btn {
+          padding: 4px 10px;
+          font-size: 10px;
+        }
+        
+        .action-btn svg {
+          width: 10px;
+          height: 10px;
+        }
+        
+        .prompt-tag {
+          font-size: 9px;
+        }
+        
+        .img-skeleton {
+          height: 240px;
+        }
+        
+        .empty-orb {
+          width: 60px;
+          height: 60px;
+        }
+        
         .empty-title {
-          font-size: 22px;
+          font-size: 20px;
+        }
+        
+        .empty-sub {
+          font-size: 12px;
+          margin-bottom: 24px;
+        }
+        
+        .suggestion-card {
+          padding: 10px 12px;
+        }
+        
+        .suggestion-card .s-emoji {
+          font-size: 14px;
+        }
+        
+        .suggestion-card .s-title {
+          font-size: 11px;
+        }
+        
+        .suggestion-card .s-sub {
+          font-size: 10px;
+        }
+        
+        #input-area {
+          padding: 10px 12px 14px;
+        }
+        
+        .input-box {
+          padding: 8px 10px;
+          gap: 6px;
+        }
+        
+        #prompt-input {
+          font-size: 12.5px;
+        }
+        
+        .enhance-btn {
+          padding: 5px 8px;
+        }
+        
+        .send-btn {
+          width: 32px;
+          height: 32px;
+        }
+        
+        .send-btn svg {
+          width: 13px;
+          height: 13px;
+        }
+        
+        .quick-style {
+          padding: 2px 6px;
+          font-size: 9px;
+        }
+        
+        .input-hint {
+          font-size: 8px;
+        }
+        
+        .model-dropdown {
+          min-width: 240px;
+          right: -60px;
+        }
+        
+        .model-option {
+          padding: 8px 10px;
+          gap: 8px;
+        }
+        
+        .model-option-icon {
+          width: 28px;
+          height: 28px;
+          font-size: 12px;
+        }
+        
+        .model-option-name {
+          font-size: 12px;
+        }
+        
+        .model-option-desc {
+          font-size: 10px;
+        }
+        
+        .model-option-badge {
+          font-size: 9px;
+          padding: 1px 5px;
+        }
+        
+        #settings-panel {
+          width: 260px;
+          padding: 20px 16px;
+        }
+        
+        .preset-grid {
+          gap: 6px;
+        }
+        
+        .preset-btn {
+          padding: 8px 10px;
+          font-size: 11px;
+        }
+        
+        .slider-name {
+          font-size: 12px;
+        }
+        
+        .slider-val {
+          font-size: 12px;
+        }
+        
+        #toast {
+          bottom: 20px;
+          padding: 8px 14px;
+          font-size: 11px;
+        }
+      }
+
+      /* Small Mobile (max-width: 360px) */
+      @media (max-width: 360px) {
+        #sidebar {
+          width: 240px;
+        }
+        
+        .sidebar-top {
+          padding: 12px 12px 10px;
+        }
+        
+        .logo-icon {
+          width: 26px;
+          height: 26px;
+        }
+        
+        .logo-text {
+          font-size: 12px;
+        }
+        
+        .new-chat-btn {
+          font-size: 11px;
+          padding: 7px 10px;
+        }
+        
+        .history-item {
+          font-size: 11px;
+          padding: 6px 8px;
+        }
+        
+        #chat-inner {
+          padding: 0 10px;
+        }
+        
+        .msg-bubble {
+          max-width: 92%;
+        }
+        
+        .msg-row.user .msg-bubble {
+          max-width: 88%;
+        }
+        
+        .user-bubble {
+          font-size: 11.5px;
+          padding: 7px 10px;
+        }
+        
+        .empty-title {
+          font-size: 18px;
+        }
+        
+        .empty-sub {
+          font-size: 11px;
+        }
+        
+        .model-dropdown {
+          min-width: 220px;
+          right: -70px;
+        }
+        
+        .model-option-name {
+          font-size: 11px;
+        }
+        
+        .model-option-desc {
+          font-size: 9px;
+        }
+        
+        #settings-panel {
+          width: 240px;
+        }
+        
+        .preset-btn {
+          font-size: 10px;
+          padding: 6px 8px;
+        }
+        
+        .setting-label {
+          font-size: 11px;
+        }
+      }
+
+      /* Large Desktop (min-width: 1440px) */
+      @media (min-width: 1440px) {
+        #chat-inner {
+          max-width: 920px;
+        }
+        
+        #input-wrap {
+          max-width: 920px;
+        }
+        
+        .msg-bubble {
+          max-width: 70%;
+        }
+        
+        .msg-row.user .msg-bubble {
+          max-width: 55%;
+        }
+        
+        .suggestions-grid {
+          max-width: 640px;
+        }
+        
+        .model-dropdown {
+          min-width: 300px;
+        }
+      }
+
+      /* Ultra-wide (min-width: 1920px) */
+      @media (min-width: 1920px) {
+        #chat-inner {
+          max-width: 1000px;
+        }
+        
+        #input-wrap {
+          max-width: 1000px;
+        }
+        
+        .msg-bubble {
+          max-width: 65%;
+        }
+      }
+
+      /* Print Styles */
+      @media print {
+        #sidebar,
+        #topbar,
+        #input-area,
+        #settings-panel,
+        #hamburger,
+        #sidebar-overlay,
+        #bg-canvas,
+        #toast {
+          display: none;
+        }
+        
+        #app {
+          display: block;
+          height: auto;
+          overflow: visible;
+        }
+        
+        #main {
+          height: auto;
+          overflow: visible;
+        }
+        
+        #chat-area {
+          overflow: visible;
+          padding: 20px;
+        }
+        
+        .msg-bubble {
+          max-width: 100%;
+        }
+        
+        .user-bubble,
+        .ai-bubble {
+          background: white;
+          color: black;
+          border: 1px solid #ccc;
+        }
+        
+        .msg-avatar {
+          background: #eee;
+          color: #333;
         }
       }
     </style>
