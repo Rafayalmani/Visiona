@@ -1,0 +1,2099 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PixelForge — AI Image Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@300;400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,200;0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <style>
+      /* ========== RESET & ROOT ========== */
+      :root {
+        --bg: #030305;
+        --surface: rgba(255, 255, 255, 0.04);
+        --surface2: rgba(255, 255, 255, 0.07);
+        --border: rgba(255, 255, 255, 0.07);
+        --border2: rgba(255, 255, 255, 0.13);
+        --text: #f0f0f6;
+        --text2: #7a7a96;
+        --text3: #3f3f58;
+        --accent: #7c6af7;
+        --accent2: #a891ff;
+        --accent3: #c4b0ff;
+        --green: #34d399;
+        --gold: #f5c842;
+        --font-head: "Syne", sans-serif;
+        --font-body: "DM Sans", sans-serif;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-body);
+        overflow-x: hidden;
+        cursor: none;
+      }
+
+      /* ========== CUSTOM CURSOR ========== */
+      #cursor {
+        position: fixed;
+        width: 10px;
+        height: 10px;
+        background: var(--accent2);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 9999;
+        transform: translate(-50%, -50%);
+        transition:
+          transform 0.08s,
+          width 0.2s,
+          height 0.2s,
+          opacity 0.2s;
+        mix-blend-mode: screen;
+      }
+
+      #cursor-ring {
+        position: fixed;
+        width: 36px;
+        height: 36px;
+        border: 1px solid rgba(168, 145, 255, 0.4);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 9998;
+        transform: translate(-50%, -50%);
+        transition:
+          transform 0.18s ease-out,
+          width 0.25s,
+          height 0.25s,
+          border-color 0.2s;
+      }
+
+      body:hover #cursor {
+        opacity: 1;
+      }
+
+      a:hover ~ #cursor,
+      button:hover ~ #cursor {
+        width: 20px;
+        height: 20px;
+      }
+
+      /* ========== CANVAS & GRAIN ========== */
+      #bg-canvas {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+      }
+
+      #grain {
+        position: fixed;
+        inset: 0;
+        z-index: 1;
+        pointer-events: none;
+        opacity: 0.035;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+        background-size: 160px 160px;
+      }
+
+      #page {
+        position: relative;
+        z-index: 2;
+      }
+
+      /* ========== HERO SECTION ========== */
+      #hero {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 40px 24px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      /* ========== NAVIGATION ========== */
+      #nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        padding: 20px 48px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: linear-gradient(to bottom, rgba(3, 3, 5, 0.9), transparent);
+        animation: fade-down 1s 0.2s both;
+      }
+
+      @keyframes fade-down {
+        from {
+          opacity: 0;
+          transform: translateY(-16px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .nav-logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-decoration: none;
+      }
+
+      .nav-logo-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 9px;
+        background: linear-gradient(135deg, #7c6af7, #a891ff);
+        display: grid;
+        place-items: center;
+        box-shadow: 0 0 20px rgba(124, 106, 247, 0.5);
+      }
+
+      .nav-logo-icon svg {
+        width: 16px;
+        height: 16px;
+        fill: white;
+      }
+
+      .nav-logo-text {
+        font-family: var(--font-head);
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text);
+        letter-spacing: -0.3px;
+      }
+
+      .nav-logo-badge {
+        font-size: 8.5px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        color: var(--accent2);
+        background: rgba(124, 106, 247, 0.15);
+        border: 1px solid rgba(124, 106, 247, 0.25);
+        border-radius: 4px;
+        padding: 1px 5px;
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 32px;
+      }
+
+      .nav-link {
+        font-size: 13px;
+        color: var(--text2);
+        text-decoration: none;
+        transition: color 0.2s;
+        letter-spacing: 0.2px;
+      }
+
+      .nav-link:hover {
+        color: var(--text);
+      }
+
+      .nav-cta {
+        padding: 8px 20px;
+        border-radius: 20px;
+        background: rgba(124, 106, 247, 0.15);
+        border: 1px solid rgba(124, 106, 247, 0.3);
+        color: var(--accent2);
+        font-size: 13px;
+        font-family: var(--font-body);
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .nav-cta:hover {
+        background: rgba(124, 106, 247, 0.25);
+        border-color: rgba(124, 106, 247, 0.5);
+      }
+
+      /* ========== HERO CONTENT ========== */
+      .hero-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(124, 106, 247, 0.08);
+        border: 1px solid rgba(124, 106, 247, 0.2);
+        border-radius: 20px;
+        padding: 6px 16px;
+        font-size: 11.5px;
+        font-weight: 500;
+        color: var(--accent2);
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        margin-bottom: 32px;
+        animation: fade-up 0.8s 0.4s both;
+      }
+
+      .hero-eyebrow .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow: 0 0 8px var(--green);
+        animation: pulse-dot 2s ease-in-out infinite;
+      }
+
+      @keyframes pulse-dot {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.4;
+        }
+      }
+
+      .hero-title {
+        font-family: var(--font-head);
+        font-size: clamp(42px, 8vw, 100px);
+        font-weight: 800;
+        line-height: 0.95;
+        letter-spacing: -3px;
+        margin-bottom: 28px;
+        animation: fade-up 0.8s 0.55s both;
+      }
+
+      .hero-title .line1 {
+        display: block;
+        color: var(--text);
+      }
+
+      .hero-title .line2 {
+        display: block;
+        background: linear-gradient(
+          135deg,
+          #c4b0ff 0%,
+          #a891ff 40%,
+          #7c6af7 70%,
+          #5b4ddb 100%
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        filter: drop-shadow(0 0 40px rgba(124, 106, 247, 0.4));
+      }
+
+      .hero-sub {
+        font-size: clamp(14px, 2vw, 18px);
+        color: var(--text2);
+        max-width: 540px;
+        line-height: 1.7;
+        font-weight: 300;
+        margin-bottom: 52px;
+        animation: fade-up 0.8s 0.7s both;
+      }
+
+      .hero-sub strong {
+        color: var(--text);
+        font-weight: 400;
+      }
+
+      /* ========== CTA BUTTON ========== */
+      .cta-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        animation: fade-up 0.8s 0.85s both;
+        position: relative;
+      }
+
+      .cta-btn {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 32px;
+        border-radius: 50px;
+        background: linear-gradient(135deg, #7c6af7 0%, #a891ff 100%);
+        border: none;
+        color: white;
+        font-family: var(--font-head);
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        letter-spacing: -0.2px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow:
+          0 0 0 0 rgba(124, 106, 247, 0.4),
+          0 20px 60px rgba(124, 106, 247, 0.35);
+        overflow: hidden;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .cta-btn::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.15),
+          transparent
+        );
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+
+      .cta-btn:hover {
+        transform: translateY(-3px) scale(1.02);
+        box-shadow:
+          0 0 0 8px rgba(124, 106, 247, 0.1),
+          0 28px 80px rgba(124, 106, 247, 0.5);
+      }
+
+      .cta-btn:hover::before {
+        opacity: 1;
+      }
+
+      .cta-btn:active {
+        transform: translateY(0) scale(0.99);
+      }
+
+      .cta-btn svg {
+        width: 18px;
+        height: 18px;
+        transition: transform 0.3s;
+      }
+
+      .cta-btn:hover svg {
+        transform: translateX(4px);
+      }
+
+      .cta-btn-ring {
+        position: absolute;
+        inset: -4px;
+        border-radius: 54px;
+        border: 2px solid rgba(168, 145, 255, 0.3);
+        animation: ring-pulse 2.5s ease-in-out infinite;
+        pointer-events: none;
+      }
+
+      @keyframes ring-pulse {
+        0%,
+        100% {
+          opacity: 0.5;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0;
+          transform: scale(1.06);
+        }
+      }
+
+      .cta-note {
+        font-size: 11px;
+        color: var(--text3);
+        letter-spacing: 0.3px;
+      }
+
+      .cta-note span {
+        color: var(--accent2);
+      }
+
+      /* ========== SCROLL INDICATOR ========== */
+      .scroll-hint {
+        position: absolute;
+        bottom: 36px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        animation: fade-up 1s 1.2s both;
+        color: var(--text3);
+        font-size: 11px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+
+      .scroll-line {
+        width: 1px;
+        height: 40px;
+        background: linear-gradient(
+          to bottom,
+          transparent,
+          rgba(124, 106, 247, 0.5)
+        );
+        animation: scroll-grow 2s ease-in-out infinite;
+      }
+
+      @keyframes scroll-grow {
+        0%,
+        100% {
+          transform: scaleY(0.5);
+          opacity: 0.4;
+        }
+        50% {
+          transform: scaleY(1);
+          opacity: 1;
+        }
+      }
+
+      /* ========== STATS SECTION ========== */
+      #stats {
+        padding: 60px 24px;
+        display: flex;
+        justify-content: center;
+        animation: fade-up 0.8s 1s both;
+      }
+
+      .stats-row {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        background: var(--surface);
+        border: 1px solid var(--border2);
+        border-radius: 20px;
+        overflow: hidden;
+        max-width: 720px;
+        width: 100%;
+      }
+
+      .stat-item {
+        flex: 1;
+        padding: 28px 20px;
+        text-align: center;
+        border-right: 1px solid var(--border);
+      }
+
+      .stat-item:last-child {
+        border-right: none;
+      }
+
+      .stat-num {
+        font-family: var(--font-head);
+        font-size: 32px;
+        font-weight: 800;
+        color: var(--text);
+        letter-spacing: -1px;
+      }
+
+      .stat-num .accent {
+        color: var(--accent2);
+      }
+
+      .stat-label {
+        font-size: 11px;
+        color: var(--text3);
+        margin-top: 4px;
+        letter-spacing: 0.5px;
+      }
+
+      /* ========== FEATURES SECTION ========== */
+      #features {
+        padding: 60px 24px;
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+
+      .section-label {
+        text-align: center;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--accent2);
+        margin-bottom: 16px;
+      }
+
+      .section-title {
+        text-align: center;
+        font-family: var(--font-head);
+        font-size: clamp(28px, 5vw, 52px);
+        font-weight: 800;
+        color: var(--text);
+        letter-spacing: -1.5px;
+        margin-bottom: 14px;
+        line-height: 1.05;
+      }
+
+      .section-sub {
+        text-align: center;
+        font-size: 15px;
+        color: var(--text2);
+        max-width: 480px;
+        margin: 0 auto 48px;
+        line-height: 1.6;
+        font-weight: 300;
+        padding: 0 16px;
+      }
+
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+      }
+
+      .feat-card {
+        padding: 28px;
+        border-radius: 20px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .feat-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        background: radial-gradient(
+          circle at 50% 0%,
+          rgba(124, 106, 247, 0.08),
+          transparent 70%
+        );
+        transition: opacity 0.3s;
+      }
+
+      .feat-card:hover {
+        border-color: rgba(124, 106, 247, 0.25);
+        transform: translateY(-4px);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      }
+
+      .feat-card:hover::before {
+        opacity: 1;
+      }
+
+      .feat-icon {
+        font-size: 28px;
+        margin-bottom: 16px;
+        display: block;
+      }
+
+      .feat-title {
+        font-family: var(--font-head);
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 8px;
+      }
+
+      .feat-desc {
+        font-size: 13.5px;
+        color: var(--text2);
+        line-height: 1.6;
+        font-weight: 300;
+      }
+
+      /* ========== MODELS SECTION ========== */
+      #models-section {
+        padding: 60px 24px;
+        background: rgba(255, 255, 255, 0.015);
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+      }
+
+      .models-inner {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+
+      .models-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 12px;
+        margin-top: 48px;
+      }
+
+      .model-card {
+        padding: 20px;
+        border-radius: 16px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        transition: all 0.25s;
+      }
+
+      .model-card:hover {
+        border-color: rgba(124, 106, 247, 0.3);
+        background: var(--surface2);
+        transform: translateY(-2px);
+      }
+
+      .model-card-top {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .model-card-icon {
+        font-size: 22px;
+      }
+
+      .model-card-name {
+        font-family: var(--font-head);
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text);
+      }
+
+      .model-card-tag {
+        font-size: 10px;
+        padding: 2px 8px;
+        border-radius: 20px;
+        font-weight: 600;
+        margin-left: auto;
+      }
+
+      .tag-free {
+        background: rgba(52, 211, 153, 0.12);
+        color: var(--green);
+        border: 1px solid rgba(52, 211, 153, 0.2);
+      }
+
+      .tag-best {
+        background: rgba(124, 106, 247, 0.15);
+        color: var(--accent2);
+        border: 1px solid rgba(124, 106, 247, 0.25);
+      }
+
+      .tag-fast {
+        background: rgba(245, 200, 66, 0.1);
+        color: var(--gold);
+        border: 1px solid rgba(245, 200, 66, 0.2);
+      }
+
+      .tag-new {
+        background: rgba(96, 165, 250, 0.1);
+        color: #60a5fa;
+        border: 1px solid rgba(96, 165, 250, 0.2);
+      }
+
+      .model-card-desc {
+        font-size: 12.5px;
+        color: var(--text2);
+        line-height: 1.5;
+        font-weight: 300;
+      }
+
+      .model-card-speed {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 2px;
+        flex-wrap: wrap;
+      }
+
+      .speed-label {
+        font-size: 11px;
+        color: var(--text3);
+      }
+
+      .speed-bar {
+        flex: 1;
+        height: 3px;
+        background: var(--surface2);
+        border-radius: 2px;
+        overflow: hidden;
+        min-width: 80px;
+      }
+
+      .speed-fill {
+        height: 100%;
+        border-radius: 2px;
+        background: linear-gradient(90deg, var(--accent), var(--accent2));
+      }
+
+      /* ========== POWERED BY SECTION ========== */
+      #powered-by {
+        padding: 60px 24px;
+        max-width: 900px;
+        margin: 0 auto;
+      }
+
+      .powered-card {
+        background: var(--surface);
+        border: 1px solid var(--border2);
+        border-radius: 24px;
+        padding: 32px 24px;
+        display: flex;
+        gap: 32px;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .powered-card::after {
+        content: "";
+        position: absolute;
+        right: -60px;
+        top: -60px;
+        width: 240px;
+        height: 240px;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle,
+          rgba(124, 106, 247, 0.08),
+          transparent 70%
+        );
+        pointer-events: none;
+      }
+
+      .powered-logo {
+        font-size: 48px;
+        flex-shrink: 0;
+        filter: drop-shadow(0 0 20px rgba(124, 106, 247, 0.3));
+      }
+
+      .powered-content {
+        flex: 1;
+      }
+
+      .powered-eyebrow {
+        font-size: 10.5px;
+        font-weight: 600;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        color: var(--accent2);
+        margin-bottom: 12px;
+      }
+
+      .powered-title {
+        font-family: var(--font-head);
+        font-size: 24px;
+        font-weight: 800;
+        color: var(--text);
+        margin-bottom: 14px;
+        letter-spacing: -0.5px;
+      }
+
+      .powered-desc {
+        font-size: 13.5px;
+        color: var(--text2);
+        line-height: 1.7;
+        font-weight: 300;
+      }
+
+      .powered-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 20px;
+      }
+
+      .chip {
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        background: rgba(124, 106, 247, 0.08);
+        border: 1px solid rgba(124, 106, 247, 0.18);
+        color: var(--accent2);
+      }
+
+      /* ========== FOUNDER SECTION ========== */
+      #founder {
+        padding: 60px 24px;
+      }
+
+      .founder-inner {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+
+      .founder-card {
+        background: var(--surface);
+        border: 1px solid var(--border2);
+        border-radius: 24px;
+        padding: 32px 24px;
+        display: flex;
+        gap: 32px;
+        align-items: flex-start;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .founder-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          ellipse at 80% 20%,
+          rgba(124, 106, 247, 0.05),
+          transparent 60%
+        );
+        pointer-events: none;
+      }
+
+      .founder-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 20px;
+        flex-shrink: 0;
+        background: linear-gradient(135deg, #7c6af7, #a891ff);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-head);
+        font-size: 28px;
+        font-weight: 800;
+        color: white;
+        box-shadow:
+          0 0 40px rgba(124, 106, 247, 0.35),
+          0 8px 24px rgba(0, 0, 0, 0.3);
+        position: relative;
+      }
+
+      .founder-avatar::after {
+        content: "";
+        position: absolute;
+        inset: -2px;
+        border-radius: 22px;
+        background: conic-gradient(
+          from 0deg,
+          transparent 50%,
+          rgba(168, 145, 255, 0.4) 80%,
+          transparent 100%
+        );
+        animation: avatar-spin 6s linear infinite;
+        z-index: -1;
+      }
+
+      @keyframes avatar-spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .founder-content {
+        flex: 1;
+      }
+
+      .founder-role {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        color: var(--accent2);
+        margin-bottom: 8px;
+      }
+
+      .founder-name {
+        font-family: var(--font-head);
+        font-size: 26px;
+        font-weight: 800;
+        color: var(--text);
+        margin-bottom: 4px;
+        letter-spacing: -0.5px;
+      }
+
+      .founder-title-line {
+        font-size: 13px;
+        color: var(--text2);
+        margin-bottom: 20px;
+        font-weight: 300;
+      }
+
+      .founder-bio {
+        font-size: 13.5px;
+        color: var(--text2);
+        line-height: 1.75;
+        font-weight: 300;
+        margin-bottom: 24px;
+      }
+
+      .founder-links {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .founder-link {
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 12px;
+        background: var(--surface2);
+        border: 1px solid var(--border2);
+        color: var(--text2);
+        text-decoration: none;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .founder-link:hover {
+        background: rgba(124, 106, 247, 0.12);
+        border-color: rgba(124, 106, 247, 0.3);
+        color: var(--accent2);
+      }
+
+      .founder-link svg {
+        width: 12px;
+        height: 12px;
+      }
+
+      /* ========== BOTTOM CTA ========== */
+      #bottom-cta {
+        padding: 80px 24px 60px;
+        text-align: center;
+        position: relative;
+      }
+
+      .bottom-cta-glow {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 80%;
+        max-width: 600px;
+        height: 300px;
+        background: radial-gradient(
+          ellipse,
+          rgba(124, 106, 247, 0.08),
+          transparent 70%
+        );
+        pointer-events: none;
+      }
+
+      .bottom-cta-title {
+        font-family: var(--font-head);
+        font-size: clamp(32px, 6vw, 68px);
+        font-weight: 800;
+        color: var(--text);
+        letter-spacing: -2px;
+        margin-bottom: 20px;
+        line-height: 1.05;
+      }
+
+      .bottom-cta-sub {
+        font-size: 15px;
+        color: var(--text2);
+        max-width: 400px;
+        margin: 0 auto 40px;
+        font-weight: 300;
+        padding: 0 16px;
+      }
+
+      /* ========== FOOTER ========== */
+      footer {
+        padding: 24px 24px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 11px;
+        color: var(--text3);
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+
+      footer a {
+        color: var(--text3);
+        text-decoration: none;
+        transition: color 0.2s;
+      }
+
+      footer a:hover {
+        color: var(--accent2);
+      }
+
+      /* ========== ANIMATIONS ========== */
+      @keyframes fade-up {
+        from {
+          opacity: 0;
+          transform: translateY(24px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .reveal {
+        opacity: 0;
+        transform: translateY(28px);
+        transition:
+          opacity 0.7s ease,
+          transform 0.7s ease;
+      }
+
+      .reveal.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      /* ========== PAGE TRANSITION ========== */
+      #transition-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 9000;
+        background: var(--bg);
+        transform: translateY(100%);
+        transition: transform 0.7s cubic-bezier(0.76, 0, 0.24, 1);
+      }
+
+      #transition-overlay.entering {
+        transform: translateY(0);
+      }
+
+      /* ========== RESPONSIVE BREAKPOINTS ========== */
+
+      /* Tablet Landscape (max-width: 1024px) */
+      @media (max-width: 1024px) {
+        #nav {
+          padding: 16px 32px;
+        }
+
+        .features-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .models-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      /* Tablet Portrait (max-width: 768px) */
+      @media (max-width: 768px) {
+        body {
+          cursor: auto;
+        }
+
+        #cursor,
+        #cursor-ring {
+          display: none;
+        }
+
+        #nav {
+          padding: 14px 20px;
+        }
+
+        .nav-links {
+          display: none;
+        }
+
+        .hero-title {
+          letter-spacing: -2px;
+        }
+
+        .cta-btn {
+          padding: 12px 28px;
+          font-size: 14px;
+          white-space: nowrap;
+        }
+
+        .cta-btn svg {
+          width: 16px;
+          height: 16px;
+        }
+
+        #stats {
+          padding: 40px 20px;
+        }
+
+        .stats-row {
+          flex-direction: column;
+        }
+
+        .stat-item {
+          border-right: none;
+          border-bottom: 1px solid var(--border);
+          padding: 20px;
+        }
+
+        .stat-item:last-child {
+          border-bottom: none;
+        }
+
+        .stat-num {
+          font-size: 28px;
+        }
+
+        .features-grid {
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
+
+        .models-grid {
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
+
+        .powered-card {
+          flex-direction: column;
+          text-align: center;
+          gap: 20px;
+          padding: 28px 20px;
+        }
+
+        .powered-card::after {
+          width: 180px;
+          height: 180px;
+        }
+
+        .powered-chips {
+          justify-content: center;
+        }
+
+        .founder-card {
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          gap: 20px;
+          padding: 28px 20px;
+        }
+
+        .founder-links {
+          justify-content: center;
+        }
+
+        .section-sub {
+          margin-bottom: 36px;
+        }
+
+        .scroll-hint {
+          bottom: 20px;
+        }
+      }
+
+      /* Mobile Large (max-width: 480px) */
+      @media (max-width: 480px) {
+        #nav {
+          padding: 12px 16px;
+        }
+
+        .nav-logo-text {
+          font-size: 14px;
+        }
+
+        .nav-logo-badge {
+          font-size: 7px;
+          padding: 1px 4px;
+        }
+
+        .hero-eyebrow {
+          font-size: 10px;
+          padding: 4px 12px;
+          
+        }
+
+        .hero-title {
+          margin-bottom: 50px;
+        }
+
+        .hero-sub {
+          margin-bottom: 36px;
+          padding: 0 8px;
+        }
+
+        .cta-wrap {
+          gap: 12px;
+        }
+
+        .cta-btn {
+          padding: 10px 24px;
+          font-size: 13px;
+          gap: 8px;
+        }
+
+        .cta-note {
+          font-size: 10px;
+        }
+
+        #stats {
+          padding: 32px 16px;
+        }
+
+        .stat-item {
+          padding: 16px;
+        }
+
+        .stat-num {
+          font-size: 24px;
+        }
+
+        .stat-label {
+          font-size: 10px;
+        }
+
+        #features {
+          padding: 48px 16px;
+        }
+
+        .section-title {
+          font-size: clamp(26px, 5vw, 32px);
+        }
+
+        .section-sub {
+          font-size: 13px;
+          margin-bottom: 32px;
+        }
+
+        .feat-card {
+          padding: 20px;
+        }
+
+        .feat-icon {
+          font-size: 24px;
+        }
+
+        .feat-title {
+          font-size: 15px;
+        }
+
+        .feat-desc {
+          font-size: 12px;
+        }
+
+        #models-section {
+          padding: 48px 16px;
+        }
+
+        .model-card {
+          padding: 16px;
+        }
+
+        .model-card-top {
+          gap: 8px;
+        }
+
+        .model-card-name {
+          font-size: 13px;
+        }
+
+        .model-card-desc {
+          font-size: 11px;
+        }
+
+        #powered-by {
+          padding: 48px 16px;
+        }
+
+        .powered-card {
+          padding: 24px 16px;
+        }
+
+        .powered-logo {
+          font-size: 40px;
+        }
+
+        .powered-title {
+          font-size: 20px;
+        }
+
+        .powered-desc {
+          font-size: 12px;
+        }
+
+        .chip {
+          font-size: 10px;
+          padding: 4px 10px;
+        }
+
+        #founder {
+          padding: 48px 16px;
+        }
+
+        .founder-card {
+          padding: 24px 16px;
+        }
+
+        .founder-avatar {
+          width: 70px;
+          height: 70px;
+          font-size: 24px;
+        }
+
+        .founder-name {
+          font-size: 22px;
+        }
+
+        .founder-title-line {
+          font-size: 12px;
+        }
+
+        .founder-bio {
+          font-size: 12px;
+        }
+
+        .founder-link {
+          font-size: 11px;
+          padding: 5px 12px;
+        }
+
+        #bottom-cta {
+          padding: 60px 16px 48px;
+        }
+
+        .bottom-cta-title {
+          font-size: clamp(28px, 6vw, 40px);
+        }
+
+        .bottom-cta-sub {
+          font-size: 13px;
+          margin-bottom: 32px;
+        }
+
+        footer {
+          flex-direction: column;
+          text-align: center;
+          gap: 12px;
+          padding: 20px 16px;
+        }
+      }
+
+      /* Small Mobile (max-width: 360px) */
+      @media (max-width: 360px) {
+        .hero-title {
+          font-size: clamp(32px, 8vw, 42px);
+        }
+
+        .cta-btn {
+          padding: 10px 20px;
+          font-size: 12px;
+        }
+
+        .stat-num {
+          font-size: 22px;
+        }
+
+        .section-title {
+          font-size: clamp(24px, 5vw, 28px);
+        }
+
+        .model-card-tag {
+          margin-left: 0;
+        }
+      }
+
+      /* Large Desktop (min-width: 1440px) */
+      @media (min-width: 1440px) {
+        #features {
+          max-width: 1200px;
+        }
+
+        .features-grid {
+          gap: 24px;
+        }
+
+        .feat-card {
+          padding: 36px;
+        }
+
+        .models-inner {
+          max-width: 1000px;
+        }
+
+        .models-grid {
+          gap: 20px;
+        }
+
+        .stats-row {
+          max-width: 800px;
+        }
+
+        .stat-item {
+          padding: 40px 32px;
+        }
+
+        .stat-num {
+          font-size: 42px;
+        }
+      }
+
+      /* Print Styles */
+      @media print {
+        body {
+          background: white;
+          color: black;
+        }
+
+        #cursor,
+        #cursor-ring,
+        #bg-canvas,
+        #grain,
+        #transition-overlay,
+        .scroll-hint {
+          display: none;
+        }
+
+        .cta-btn {
+          background: #7c6af7;
+          color: white;
+        }
+
+        .feat-card,
+        .model-card,
+        .powered-card,
+        .founder-card {
+          border: 1px solid #ccc;
+          background: white;
+          color: black;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- CUSTOM CURSOR -->
+    <div id="cursor"></div>
+    <div id="cursor-ring"></div>
+
+    <!-- PAGE TRANSITION OVERLAY -->
+    <div id="transition-overlay"></div>
+
+    <!-- 3D CANVAS -->
+    <canvas id="bg-canvas"></canvas>
+    <div id="grain"></div>
+
+    <div id="page">
+      <!-- NAV -->
+      <nav id="nav">
+        <a class="nav-logo" href="#">
+          <div class="nav-logo-icon">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+              />
+            </svg>
+          </div>
+          <span class="nav-logo-text">PixelForge</span>
+          <span class="nav-logo-badge">AI</span>
+        </a>
+        <div class="nav-links">
+          <a href="#features" class="nav-link">Features</a>
+          <a href="#models-section" class="nav-link">Models</a>
+          <a href="#founder" class="nav-link">About</a>
+          <a href="PixelForge.html" class="nav-cta" onclick="launchApp(event)"
+            >Open Studio </a
+          >
+        </div>
+      </nav>
+
+      <!-- HERO -->
+      <section id="hero">
+        <div class="hero-eyebrow">
+          <div class="dot"></div>
+          Powered by Pollinations AI · Free Forever
+        </div>
+
+        <h1 class="hero-title">
+          <span class="line1">Forge Stunning</span>
+          <span class="line2">Imagery with AI</span>
+        </h1>
+
+        <p class="hero-sub">
+          Describe <strong>anything</strong> PixelForge transforms your words
+          into breathtaking visuals in seconds. No account. Just
+          pure creation.
+        </p>
+
+        <div class="cta-wrap">
+          <a
+            href="PixelForge.html"
+            class="cta-btn"
+            onclick="launchApp(event)"
+            id="main-cta"
+          >
+            <div class="cta-btn-ring"></div>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+            >
+              <polygon points="5 3 19 12 5 21 5 3" />
+            </svg>
+            Start Creating  It's Free
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+            >
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </a>
+          <p class="cta-note">
+            No signup required · <span>100% Free</span> · Works on any device
+          </p>
+        </div>
+
+        <div class="scroll-hint">
+          <div class="scroll-line"></div>
+          Scroll
+        </div>
+      </section>
+
+     
+
+      <!-- FEATURES -->
+      <section id="features">
+        <p class="section-label reveal">What's Inside</p>
+        <h2 class="section-title reveal">
+          Everything You Need.<br />Nothing You Don't.
+        </h2>
+        <p class="section-sub reveal">
+          A complete AI image studio packed into a single, blazing-fast
+          interface.
+        </p>
+
+        <div class="features-grid">
+          <div class="feat-card reveal">
+            <span class="feat-icon">💬</span>
+            <div class="feat-title">Chat Interface</div>
+            <div class="feat-desc">
+              Generate images through a natural conversation. Your
+              history is saved and restored automatically.
+            </div>
+          </div>
+          <div class="feat-card reveal">
+            <span class="feat-icon">🎨</span>
+            <div class="feat-title">Smart Prompt Engine</div>
+            <div class="feat-desc">
+              Hit Enhance to auto-enrich your prompts with cinematic lighting,
+              8K quality tags, and style-specific modifiers.
+            </div>
+          </div>
+          <div class="feat-card reveal">
+            <span class="feat-icon">⚡</span>
+            <div class="feat-title">6 Powerful Models</div>
+            <div class="feat-desc">
+              Switch between FLUX, Flux Schnell, Z-Image Turbo, Wan 2.7, Qwen
+              Image+, and Gemini Fast live, no reload.
+            </div>
+          </div>
+          <div class="feat-card reveal">
+            <span class="feat-icon">🎭</span>
+            <div class="feat-title">Style Presets</div>
+            <div class="feat-desc">
+              One-click styles: Realistic, Anime, Cyberpunk, Fantasy, Watercolor
+              each tuned with the perfect prompt suffix.
+            </div>
+          </div>
+          <div class="feat-card reveal">
+            <span class="feat-icon">💾</span>
+            <div class="feat-title">Full Persistence</div>
+            <div class="feat-desc">
+              All sessions, prompts, and images stored locally. Reload anytime
+              and pick up right where you left off.
+            </div>
+          </div>
+          <div class="feat-card reveal">
+            <span class="feat-icon">🌐</span>
+            <div class="feat-title">Zero Backend</div>
+            <div class="feat-desc">
+              Purely frontend. No server, no database, no login. Your data never
+              leaves your device. 100% private.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MODELS -->
+      <section id="models-section">
+        <div class="models-inner">
+          <p class="section-label reveal">AI Models</p>
+          <h2 class="section-title reveal">Pick Your Engine</h2>
+          <p class="section-sub reveal">
+            Six free AI models. Flip between them in one click and find your
+            perfect style.
+          </p>
+
+          <div class="models-grid">
+            <div class="model-card reveal">
+              <div class="model-card-top">
+                <span class="model-card-icon">⚡</span>
+                <span class="model-card-name">FLUX</span>
+                <span class="model-card-tag tag-best">Best</span>
+              </div>
+              <div class="model-card-desc">
+                Highest image quality among free models. Rich detail and
+                realistic lighting.
+              </div>
+              <div class="model-card-speed">
+                <span class="speed-label">Speed</span>
+                <div class="speed-bar">
+                  <div class="speed-fill" style="width: 55%"></div>
+                </div>
+              </div>
+            </div>
+            <div class="model-card reveal">
+              <div class="model-card-top">
+                <span class="model-card-icon">🚀</span>
+                <span class="model-card-name">Flux Schnell</span>
+                <span class="model-card-tag tag-fast">Fast</span>
+              </div>
+              <div class="model-card-desc">
+                Blazing fast version of FLUX. Great quality with a fraction of
+                the wait.
+              </div>
+              <div class="model-card-speed">
+                <span class="speed-label">Speed</span>
+                <div class="speed-bar">
+                  <div class="speed-fill" style="width: 82%"></div>
+                </div>
+              </div>
+            </div>
+            <div class="model-card reveal">
+              <div class="model-card-top">
+                <span class="model-card-icon">🎨</span>
+                <span class="model-card-name">Z-Image Turbo</span>
+                <span class="model-card-tag tag-fast">Fast</span>
+              </div>
+              <div class="model-card-desc">
+                Vivid, stylized imagery. Perfect for bold creative and artistic
+                prompts.
+              </div>
+              <div class="model-card-speed">
+                <span class="speed-label">Speed</span>
+                <div class="speed-bar">
+                  <div class="speed-fill" style="width: 78%"></div>
+                </div>
+              </div>
+            </div>
+            <div class="model-card reveal">
+              <div class="model-card-top">
+                <span class="model-card-icon">🌊</span>
+                <span class="model-card-name">Wan 2.7 Image</span>
+                <span class="model-card-tag tag-new">New</span>
+              </div>
+              <div class="model-card-desc">
+                Creative and deeply detailed. Excellent for complex scenes and
+                compositions.
+              </div>
+              <div class="model-card-speed">
+                <span class="speed-label">Speed</span>
+                <div class="speed-bar">
+                  <div class="speed-fill" style="width: 62%"></div>
+                </div>
+              </div>
+            </div>
+            <div class="model-card reveal">
+              <div class="model-card-top">
+                <span class="model-card-icon">🔮</span>
+                <span class="model-card-name">Qwen Image+</span>
+                <span class="model-card-tag tag-new">New</span>
+              </div>
+              <div class="model-card-desc">
+                Sharp, photorealistic output. Strong at faces, textures, and
+                natural scenes.
+              </div>
+              <div class="model-card-speed">
+                <span class="speed-label">Speed</span>
+                <div class="speed-bar">
+                  <div class="speed-fill" style="width: 66%"></div>
+                </div>
+              </div>
+            </div>
+            <div class="model-card reveal">
+              <div class="model-card-top">
+                <span class="model-card-icon">💨</span>
+                <span class="model-card-name">Gemini Fast</span>
+                <span class="model-card-tag tag-free">Free</span>
+              </div>
+              <div class="model-card-desc">
+                Google's Gemini backend. Ultra fast generation for quick
+                ideation and drafts.
+              </div>
+              <div class="model-card-speed">
+                <span class="speed-label">Speed</span>
+                <div class="speed-bar">
+                  <div class="speed-fill" style="width: 92%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- POLLINATIONS -->
+      <section id="powered-by" class="reveal">
+        <div class="powered-card">
+          <div class="powered-logo">🌸</div>
+          <div class="powered-content">
+            <div class="powered-eyebrow">Powered By</div>
+            <div class="powered-title">Pollinations.ai</div>
+            <div class="powered-desc">
+              Pollinations is a free, open-source AI image generation platform.
+              Just craft a URL with your prompt, and a world class AI model
+              returns a full image. PixelForge is built entirely on top of this
+              incredible open infrastructure.
+            </div>
+            <div class="powered-chips">
+              <span class="chip">Free API</span>
+              
+              <span class="chip">1024×1024 Output</span>
+              <span class="chip">Multiple Models</span>
+              <span class="chip">Open Source</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FOUNDER -->
+      <section id="founder">
+        <div class="founder-inner">
+          <p class="section-label reveal">The Builder</p>
+          <div class="founder-card reveal">
+            <div class="founder-avatar">R</div>
+            <div class="founder-content">
+              <div class="founder-role">Founder & Developer</div>
+              <div class="founder-name">Rafay Almani</div>
+              <div class="founder-title-line">
+                Full-Stack Developer · AI Product Builder · Designer
+              </div>
+              <div class="founder-bio">
+                I build fast, beautiful, production-grade web applications 
+                from AI tools and SaaS platforms to e-commerce experiences.
+                PixelForge is my vision for what an AI image studio should feel
+                like: premium, instant, and completely free. Built with React
+                principles, Three.js for the 3D atmosphere, and the Pollinations
+                open API. No backend. No limits.
+              </div>
+              <div class="founder-links">
+                <a
+                  href="https://almani-lime.vercel.app"
+                  target="_blank"
+                  class="founder-link"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <path
+                      d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
+                    />
+                  </svg>
+                  Portfolio
+                </a>
+                <a href="#" class="founder-link">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"
+                    />
+                  </svg>
+                  GitHub
+                </a>
+                <a href="#" class="founder-link">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"
+                    />
+                    <rect x="2" y="9" width="4" height="12" />
+                    <circle cx="4" cy="4" r="2" />
+                  </svg>
+                  LinkedIn
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- BOTTOM CTA -->
+      <section id="bottom-cta">
+        <div class="bottom-cta-glow"></div>
+        <h2 class="bottom-cta-title reveal">Ready to Create?</h2>
+        <p class="bottom-cta-sub reveal">
+          Jump into the studio. Your first image is one prompt away.
+        </p>
+        <div class="reveal">
+          <a href="PixelForge.html" class="cta-btn" onclick="launchApp(event)">
+            <div class="cta-btn-ring"></div>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+            >
+              <polygon points="5 3 19 12 5 21 5 3" />
+            </svg>
+            Launch PixelForge Studio
+          </a>
+        </div>
+      </section>
+
+      <!-- FOOTER -->
+      <footer>
+        <div>
+          © 2026 PixelForge · Built by
+          <a href="https://almani-lime.vercel.app" target="_blank"
+            >Rafay Almani</a
+          >
+        </div>
+        <div style="display: flex; gap: 20px">
+          <a href="#">Privacy</a>
+          <a href="#">Terms</a>
+          <a href="https://pollinations.ai" target="_blank"
+            >Powered by Pollinations</a
+          >
+        </div>
+      </footer>
+    </div>
+    <!-- end #page -->
+
+    <script>
+      // ========== LAUNCH WITH TRANSITION ==========
+      function launchApp(e) {
+        e.preventDefault();
+        const href = e.currentTarget.href;
+        const overlay = document.getElementById("transition-overlay");
+        overlay.classList.add("entering");
+        setTimeout(() => {
+          window.location.href = href;
+        }, 680);
+      }
+
+      // ========== CUSTOM CURSOR ==========
+      const cursor = document.getElementById("cursor");
+      const cursorRing = document.getElementById("cursor-ring");
+      let cx = 0,
+        cy = 0,
+        rx = 0,
+        ry = 0;
+      document.addEventListener("mousemove", (e) => {
+        cx = e.clientX;
+        cy = e.clientY;
+      });
+      function animCursor() {
+        cursor.style.left = cx + "px";
+        cursor.style.top = cy + "px";
+        rx += (cx - rx) * 0.12;
+        ry += (cy - ry) * 0.12;
+        cursorRing.style.left = rx + "px";
+        cursorRing.style.top = ry + "px";
+        requestAnimationFrame(animCursor);
+      }
+      animCursor();
+      document.querySelectorAll("a, button").forEach((el) => {
+        el.addEventListener("mouseenter", () => {
+          cursor.style.transform = "translate(-50%,-50%) scale(2)";
+          cursorRing.style.transform = "translate(-50%,-50%) scale(1.4)";
+          cursorRing.style.borderColor = "rgba(168,145,255,0.7)";
+        });
+        el.addEventListener("mouseleave", () => {
+          cursor.style.transform = "translate(-50%,-50%) scale(1)";
+          cursorRing.style.transform = "translate(-50%,-50%) scale(1)";
+          cursorRing.style.borderColor = "rgba(168,145,255,0.4)";
+        });
+      });
+
+      // ========== SCROLL REVEAL ==========
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((e) => {
+            if (e.isIntersecting) {
+              e.target.classList.add("visible");
+            }
+          });
+        },
+        { threshold: 0.12 },
+      );
+      document
+        .querySelectorAll(".reveal")
+        .forEach((el) => observer.observe(el));
+
+      // ========== 3D BACKGROUND ==========
+      (function () {
+        const canvas = document.getElementById("bg-canvas");
+        const renderer = new THREE.WebGLRenderer({
+          canvas,
+          antialias: true,
+          alpha: true,
+        });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x000000, 0);
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(
+          55,
+          window.innerWidth / window.innerHeight,
+          0.1,
+          2000,
+        );
+        camera.position.set(0, 0, 40);
+
+        // Large orb in center-hero area
+        const orbGeo = new THREE.SphereGeometry(10, 64, 64);
+        const orbMat = new THREE.MeshBasicMaterial({
+          color: 0x7c6af7,
+          wireframe: true,
+          transparent: true,
+          opacity: 0.04,
+        });
+        const orb = new THREE.Mesh(orbGeo, orbMat);
+        orb.position.set(0, 0, -5);
+        scene.add(orb);
+
+        // Inner glow orb
+        const glowGeo = new THREE.SphereGeometry(9, 32, 32);
+        const glowMat = new THREE.MeshBasicMaterial({
+          color: 0xa891ff,
+          transparent: true,
+          opacity: 0.015,
+        });
+        const glowOrb = new THREE.Mesh(glowGeo, glowMat);
+        scene.add(glowOrb);
+
+        // Particles
+        const count = 1800;
+        const pos = new Float32Array(count * 3);
+        for (let i = 0; i < count; i++) {
+          const r = 20 + Math.random() * 60;
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.random() * Math.PI;
+          pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+          pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta) * 0.6;
+          pos[i * 3 + 2] = r * Math.cos(phi) - 20;
+        }
+        const ptGeo = new THREE.BufferGeometry();
+        ptGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+        const ptMat = new THREE.PointsMaterial({
+          color: 0x7c6af7,
+          size: 0.22,
+          transparent: true,
+          opacity: 0.55,
+          sizeAttenuation: true,
+        });
+        const particles = new THREE.Points(ptGeo, ptMat);
+        scene.add(particles);
+
+        // Floating rings
+        const rings = [];
+        for (let i = 0; i < 3; i++) {
+          const rg = new THREE.TorusGeometry(12 + i * 6, 0.04, 8, 80);
+          const rm = new THREE.MeshBasicMaterial({
+            color: 0x7c6af7,
+            transparent: true,
+            opacity: 0.06 - i * 0.015,
+          });
+          const ring = new THREE.Mesh(rg, rm);
+          ring.rotation.x = Math.PI / 2.5 + i * 0.3;
+          ring.rotation.z = i * 0.5;
+          rings.push(ring);
+          scene.add(ring);
+        }
+
+        // Floating shapes in bg
+        const floaters = [];
+        const fGeos = [
+          new THREE.OctahedronGeometry(1.2, 0),
+          new THREE.TetrahedronGeometry(1, 0),
+          new THREE.IcosahedronGeometry(0.9, 0),
+        ];
+        for (let i = 0; i < 8; i++) {
+          const m = new THREE.Mesh(
+            fGeos[i % 3],
+            new THREE.MeshBasicMaterial({
+              color: i % 2 === 0 ? 0x7c6af7 : 0xa891ff,
+              wireframe: true,
+              transparent: true,
+              opacity: 0.07,
+            }),
+          );
+          m.position.set(
+            (Math.random() - 0.5) * 80,
+            (Math.random() - 0.5) * 50,
+            (Math.random() - 0.5) * 30 - 15,
+          );
+          m.userData = {
+            rx: (Math.random() - 0.5) * 0.004,
+            ry: (Math.random() - 0.5) * 0.005,
+            ox: m.position.x,
+            oy: m.position.y,
+          };
+          floaters.push(m);
+          scene.add(m);
+        }
+
+        let mouse = { x: 0, y: 0 },
+          t = 0;
+        document.addEventListener("mousemove", (e) => {
+          mouse.x = (e.clientX / window.innerWidth - 0.5) * 2;
+          mouse.y = -(e.clientY / window.innerHeight - 0.5) * 2;
+        });
+
+        function animate() {
+          requestAnimationFrame(animate);
+          t += 0.005;
+
+          orb.rotation.y = t * 0.08 + mouse.x * 0.08;
+          orb.rotation.x = t * 0.04 + mouse.y * 0.05;
+          glowOrb.rotation.y = -t * 0.06;
+
+          rings.forEach((r, i) => {
+            r.rotation.y = t * (0.03 + i * 0.01) + mouse.x * 0.04;
+            r.rotation.x = Math.PI / 2.5 + i * 0.3 + mouse.y * 0.03;
+          });
+
+          particles.rotation.y = t * 0.04 + mouse.x * 0.06;
+          particles.rotation.x = t * 0.015 + mouse.y * 0.04;
+
+          floaters.forEach((f) => {
+            f.rotation.x += f.userData.rx;
+            f.rotation.y += f.userData.ry;
+            f.position.y =
+              f.userData.oy + Math.sin(t * 0.7 + f.userData.ox) * 1.2;
+          });
+
+          camera.position.x += (mouse.x * 3 - camera.position.x) * 0.025;
+          camera.position.y += (mouse.y * 2 - camera.position.y) * 0.025;
+          camera.lookAt(scene.position);
+
+          renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener("resize", () => {
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+      })();
+    </script>
+  </body>
+</html>
