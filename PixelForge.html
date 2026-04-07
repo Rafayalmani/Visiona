@@ -2618,7 +2618,7 @@
         // Hide empty state
         document.getElementById("empty-state")?.remove();
 
-        const seed = Math.floor(Math.random() * 100000);
+        const seed = Date.now() + Math.floor(Math.random() * 999999);
         const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhanced)}?model=${currentModel}&width=1024&height=1024&seed=${seed}&enhance=false&nologo=true`;
 
         // Render user msg
