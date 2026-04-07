@@ -2430,235 +2430,216 @@
       originalHeight = window.innerHeight;
     });
   });
-      // ========== STATE ==========
-      let chats = JSON.parse(localStorage.getItem("pf_chats") || "[]");
-      let currentChatId = null;
-      let isGenerating = false;
-      let currentPreset = "realistic";
-      let settingsOpen = false;
-      let currentModel = localStorage.getItem("pf_model") || "flux";
-      let currentModelLabel = localStorage.getItem("pf_model_label") || "FLUX";
+      
+       // ========== STATE ==========
+let chats = JSON.parse(localStorage.getItem('pf_chats') || '[]');
+let currentChatId = null;
+let isGenerating = false;
+let currentPreset = 'realistic';
+let settingsOpen = false;
+let currentModel = localStorage.getItem('pf_model') || 'flux';
+let currentModelLabel = localStorage.getItem('pf_model_label') || 'FLUX';
+const modelDropdownOpen = { v: false };
 
-      const modelDropdownOpen = { v: false };
+const presetSuffixes = {
+  realistic: 'ultra realistic, photorealistic, 8k, cinematic lighting, highly detailed, professional photography',
+  anime: 'anime style, detailed anime illustration, vibrant colors, Studio Ghibli inspired, smooth shading',
+  cyberpunk: 'cyberpunk aesthetic, neon lights, dystopian, futuristic city, dark atmosphere, blade runner style',
+  fantasy: 'fantasy art, magical, epic, detailed digital painting, concept art, artstation trending',
+  watercolor: 'watercolor painting, soft colors, artistic, hand-painted, expressive brushwork',
+  none: ''
+};
 
-      const presetSuffixes = {
-        realistic:
-          "ultra realistic, photorealistic, 8k, cinematic lighting, highly detailed, professional photography",
-        anime:
-          "anime style, detailed anime illustration, vibrant colors, Studio Ghibli inspired, smooth shading",
-        cyberpunk:
-          "cyberpunk aesthetic, neon lights, dystopian, futuristic city, dark atmosphere, blade runner style",
-        fantasy:
-          "fantasy art, magical, epic, detailed digital painting, concept art, artstation trending",
-        watercolor:
-          "watercolor painting, soft colors, artistic, hand-painted, expressive brushwork",
-        none: "",
-      };
+// ========== INIT ==========
+renderSidebarHistory();
+if (chats.length > 0) loadChat(chats[0].id);
+document.getElementById('model-pill-label').textContent = currentModelLabel;
+document.querySelectorAll('.model-option').forEach(o => o.classList.remove('active'));
+const activeOpt = document.getElementById('opt-' + currentModel);
+if (activeOpt) activeOpt.classList.add('active');
+document.addEventListener('click', (e) => {
+  if (!document.getElementById('model-switcher').contains(e.target)) closeModelDropdown();
+});
 
-      // ========== INIT ==========
-      renderSidebarHistory();
-      if (chats.length > 0) loadChat(chats[0].id);
+// ========== MODEL SWITCHER ==========
+function toggleModelDropdown() {
+  modelDropdownOpen.v = !modelDropdownOpen.v;
+  document.getElementById('model-pill').classList.toggle('open', modelDropdownOpen.v);
+  document.getElementById('model-dropdown').classList.toggle('open', modelDropdownOpen.v);
+}
+function closeModelDropdown() {
+  modelDropdownOpen.v = false;
+  document.getElementById('model-pill').classList.remove('open');
+  document.getElementById('model-dropdown').classList.remove('open');
+}
+function selectModel(id, label) {
+  currentModel = id;
+  currentModelLabel = label;
+  localStorage.setItem('pf_model', id);
+  localStorage.setItem('pf_model_label', label);
+  document.getElementById('model-pill-label').textContent = label;
+  document.querySelectorAll('.model-option').forEach(o => o.classList.remove('active'));
+  const opt = document.getElementById('opt-' + id);
+  if (opt) opt.classList.add('active');
+  closeModelDropdown();
+  showToast('🤖 Switched to ' + label);
+}
 
-      // Init model pill
-      document.getElementById("model-pill-label").textContent =
-        currentModelLabel;
-      // Mark active option
-      document
-        .querySelectorAll(".model-option")
-        .forEach((o) => o.classList.remove("active"));
-      const activeOpt = document.getElementById("opt-" + currentModel);
-      if (activeOpt) activeOpt.classList.add("active");
+// ========== SMART LOAD (defined here, at top level) ==========
+const MODEL_FALLBACKS = ['flux-schnell', 'gemini-fast'];
 
-      // Close dropdown on outside click
-      document.addEventListener("click", (e) => {
-        if (!document.getElementById("model-switcher").contains(e.target)) {
-          closeModelDropdown();
-        }
-      });
+function smartLoad(img, originalUrl, prompt, mid, attempt) {
+  if (attempt === undefined) attempt = 0;
+  const model = MODEL_FALLBACKS[Math.min(attempt, MODEL_FALLBACKS.length - 1)];
+  const seed = Date.now() + Math.floor(Math.random() * 9999999);
+  const useKey = attempt >= MODEL_FALLBACKS.length;
+  const API_KEY = 'sk_KdVQD7TO5iEBCNjOkyXdTdS8zPJfjssm';
 
-      // ========== MODEL SWITCHER ==========
-      function toggleModelDropdown() {
-        modelDropdownOpen.v = !modelDropdownOpen.v;
-        document
-          .getElementById("model-pill")
-          .classList.toggle("open", modelDropdownOpen.v);
-        document
-          .getElementById("model-dropdown")
-          .classList.toggle("open", modelDropdownOpen.v);
-      }
+  let url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) + '?model=' + model + '&width=1024&height=1024&seed=' + seed + '&nologo=true';
+  if (useKey) url += '&key=' + API_KEY;
 
-      function closeModelDropdown() {
-        modelDropdownOpen.v = false;
-        document.getElementById("model-pill").classList.remove("open");
-        document.getElementById("model-dropdown").classList.remove("open");
-      }
+  const timeout = setTimeout(function() {
+    img.src = '';
+    if (attempt < MODEL_FALLBACKS.length) {
+      showToast('⚡ Busy — retrying with backup...');
+      smartLoad(img, originalUrl, prompt, mid, attempt + 1);
+    } else if (!useKey) {
+      showToast('🔑 Switching to priority mode...');
+      smartLoad(img, originalUrl, prompt, mid, attempt + 1);
+    } else {
+      imgFinalError(mid);
+    }
+  }, 8000);
 
-      function selectModel(id, label) {
-        currentModel = id;
-        currentModelLabel = label;
-        localStorage.setItem("pf_model", id);
-        localStorage.setItem("pf_model_label", label);
-        document.getElementById("model-pill-label").textContent = label;
-        document
-          .querySelectorAll(".model-option")
-          .forEach((o) => o.classList.remove("active"));
-        const opt = document.getElementById("opt-" + id);
-        if (opt) opt.classList.add("active");
-        closeModelDropdown();
-        showToast("🤖 Switched to " + label);
-      }
+  img.onload = function() {
+    clearTimeout(timeout);
+    const skel = document.getElementById('skel_' + mid);
+    if (skel) skel.remove();
+    img.style.display = 'block';
+    scrollToBottom();
+  };
 
-      // ========== CHAT LOGIC ==========
-      function newChat() {
-        currentChatId = null;
-        document.getElementById("chat-title").textContent = "New Canvas";
-        document.getElementById("chat-count").textContent = "Ready to create";
-        renderMessages([]);
-        renderSidebarHistory();
-      }
+  img.onerror = function() {
+    clearTimeout(timeout);
+    if (attempt < MODEL_FALLBACKS.length - 1) {
+      showToast('⚡ Switching model...');
+      smartLoad(img, originalUrl, prompt, mid, attempt + 1);
+    } else if (!useKey) {
+      showToast('🔑 Switching to priority mode...');
+      smartLoad(img, originalUrl, prompt, mid, MODEL_FALLBACKS.length);
+    } else {
+      imgFinalError(mid);
+    }
+  };
 
-      function getChat(id) {
-        return chats.find((c) => c.id === id);
-      }
+  img.src = url;
+}
 
-      function loadChat(id) {
-        currentChatId = id;
-        const chat = getChat(id);
-        if (!chat) return;
-        document.getElementById("chat-title").textContent =
-          chat.title || "Untitled";
-        document.getElementById("chat-count").textContent =
-          `${chat.messages.length} generation${chat.messages.length !== 1 ? "s" : ""}`;
-        renderMessages(chat.messages);
-        renderSidebarHistory();
-        setTimeout(scrollToBottom, 100);
-      }
+function imgFinalError(mid) {
+  const skel = document.getElementById('skel_' + mid);
+  if (skel) skel.innerHTML = '<div style="height:200px;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:13px;flex-direction:column;gap:8px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="28" height="28"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>All servers busy. Please try again shortly.</div>';
+}
 
-      function renderSidebarHistory() {
-        const el = document.getElementById("sidebar-history");
-        if (chats.length === 0) {
-          el.innerHTML =
-            '<div style="padding:12px 12px;font-size:12.5px;color:var(--text3);">No sessions yet. Start creating!</div>';
-          return;
-        }
-        el.innerHTML = chats
-          .map(
-            (c) => `
-    <div class="history-item ${c.id === currentChatId ? "active" : ""}" onclick="loadChat('${c.id}')">
+// ========== CHAT LOGIC ==========
+function newChat() {
+  currentChatId = null;
+  document.getElementById('chat-title').textContent = 'New Canvas';
+  document.getElementById('chat-count').textContent = 'Ready to create';
+  renderMessages([]);
+  renderSidebarHistory();
+}
+function getChat(id) { return chats.find(c => c.id === id); }
+function loadChat(id) {
+  currentChatId = id;
+  const chat = getChat(id);
+  if (!chat) return;
+  document.getElementById('chat-title').textContent = chat.title || 'Untitled';
+  document.getElementById('chat-count').textContent = chat.messages.length + ' generation' + (chat.messages.length !== 1 ? 's' : '');
+  renderMessages(chat.messages);
+  renderSidebarHistory();
+  setTimeout(scrollToBottom, 100);
+}
+function renderSidebarHistory() {
+  const el = document.getElementById('sidebar-history');
+  if (chats.length === 0) {
+    el.innerHTML = '<div style="padding:12px 12px;font-size:12.5px;color:var(--text3);">No sessions yet. Start creating!</div>';
+    return;
+  }
+  el.innerHTML = chats.map(c => `
+    <div class="history-item ${c.id === currentChatId ? 'active' : ''}" onclick="loadChat('${c.id}')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg>
-      <span>${escHtml(c.title || "Untitled")}</span>
+      <span>${escHtml(c.title || 'Untitled')}</span>
       <span class="del-btn" onclick="event.stopPropagation();deleteChat('${c.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </span>
     </div>
-  `,
-          )
-          .join("");
-      }
+  `).join('');
+}
+function deleteChat(id) {
+  chats = chats.filter(c => c.id !== id);
+  save();
+  if (currentChatId === id) newChat();
+  else renderSidebarHistory();
+}
+function clearAll() {
+  if (!confirm('Clear all chat history?')) return;
+  chats = [];
+  save();
+  newChat();
+}
+function save() { localStorage.setItem('pf_chats', JSON.stringify(chats)); }
 
-      function deleteChat(id) {
-        chats = chats.filter((c) => c.id !== id);
-        save();
-        if (currentChatId === id) newChat();
-        else renderSidebarHistory();
-      }
+// ========== GENERATION ==========
+async function generate() {
+  if (isGenerating) return;
+  const input = document.getElementById('prompt-input');
+  const rawPrompt = input.value.trim();
+  if (!rawPrompt) return;
+  isGenerating = true;
+  document.getElementById('send-btn').disabled = true;
+  input.value = '';
+  autoResize(input);
+  if (!currentChatId) {
+    const id = 'chat_' + Date.now();
+    const title = rawPrompt.slice(0, 38) + (rawPrompt.length > 38 ? '…' : '');
+    chats.unshift({ id, title, messages: [], createdAt: Date.now() });
+    currentChatId = id;
+    save();
+    renderSidebarHistory();
+  }
+  const chat = getChat(currentChatId);
+  const creativity = document.getElementById('creativity-slider').value;
+  const detail = document.getElementById('detail-slider').value;
+  const suffix = presetSuffixes[currentPreset] || '';
+  let enhanced = rawPrompt;
+  if (suffix) enhanced += ', ' + suffix;
+  if (detail >= 8) enhanced += ', extremely detailed';
+  if (creativity >= 8) enhanced += ', creative composition';
+  const userMsg = { role: 'user', content: rawPrompt, ts: Date.now() };
+  chat.messages.push(userMsg);
+  document.getElementById('chat-title').textContent = chat.title;
+  document.getElementById('chat-count').textContent = chat.messages.length + ' generation' + (chat.messages.length !== 1 ? 's' : '');
+  document.getElementById('empty-state')?.remove();
+  const seed = Date.now() + Math.floor(Math.random() * 999999);
+  const imgUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(enhanced) + '?model=' + currentModel + '&width=1024&height=1024&seed=' + seed + '&nologo=true';
+  appendUserMsg(rawPrompt);
+  const typingId = 'typing_' + Date.now();
+  appendTyping(typingId);
+  scrollToBottom();
+  await delay(900);
+  document.getElementById(typingId)?.remove();
+  const aiMsg = { role: 'ai', prompt: rawPrompt, enhancedPrompt: enhanced, imgUrl, ts: Date.now(), seed, model: currentModelLabel };
+  chat.messages.push(aiMsg);
+  save();
+  appendAiMsg(aiMsg);
+  scrollToBottom();
+  isGenerating = false;
+  document.getElementById('send-btn').disabled = false;
+}
 
-      function clearAll() {
-        if (!confirm("Clear all chat history?")) return;
-        chats = [];
-        save();
-        newChat();
-      }
-
-      function save() {
-        localStorage.setItem("pf_chats", JSON.stringify(chats));
-      }
-
-      // ========== GENERATION ==========
-      async function generate() {
-        if (isGenerating) return;
-        const input = document.getElementById("prompt-input");
-        const rawPrompt = input.value.trim();
-        if (!rawPrompt) return;
-
-        isGenerating = true;
-        document.getElementById("send-btn").disabled = true;
-        input.value = "";
-        autoResize(input);
-
-        // Create or get chat
-        if (!currentChatId) {
-          const id = "chat_" + Date.now();
-          const title =
-            rawPrompt.slice(0, 38) + (rawPrompt.length > 38 ? "…" : "");
-          chats.unshift({ id, title, messages: [], createdAt: Date.now() });
-          currentChatId = id;
-          save();
-          renderSidebarHistory();
-        }
-
-        const chat = getChat(currentChatId);
-
-        // Build enhanced prompt
-        const creativity = document.getElementById("creativity-slider").value;
-        const detail = document.getElementById("detail-slider").value;
-        const suffix = presetSuffixes[currentPreset] || "";
-        let enhanced = rawPrompt;
-        if (suffix) enhanced += ", " + suffix;
-        if (detail >= 8) enhanced += ", extremely detailed";
-        if (creativity >= 8) enhanced += ", creative composition";
-
-        // Add user message
-        const userMsg = { role: "user", content: rawPrompt, ts: Date.now() };
-        chat.messages.push(userMsg);
-        document.getElementById("chat-title").textContent = chat.title;
-        document.getElementById("chat-count").textContent =
-          `${chat.messages.length} generation${chat.messages.length !== 1 ? "s" : ""}`;
-
-        // Hide empty state
-        document.getElementById("empty-state")?.remove();
-
-        const seed = Date.now() + Math.floor(Math.random() * 999999);
-        const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhanced)}?model=${currentModel}&width=1024&height=1024&seed=${seed}&enhance=false&nologo=true`;
-
-        // Render user msg
-        appendUserMsg(rawPrompt);
-
-        // Render typing
-        const typingId = "typing_" + Date.now();
-        appendTyping(typingId);
-        scrollToBottom();
-
-        // Wait a moment for natural feel
-        await delay(900);
-
-        // Remove typing, add AI msg
-        document.getElementById(typingId)?.remove();
-
-        const aiMsg = {
-          role: "ai",
-          prompt: rawPrompt,
-          enhancedPrompt: enhanced,
-          imgUrl,
-          ts: Date.now(),
-          seed,
-          model: currentModelLabel,
-        };
-        chat.messages.push(aiMsg);
-        save();
-
-        appendAiMsg(aiMsg);
-        scrollToBottom();
-
-        isGenerating = false;
-        document.getElementById("send-btn").disabled = false;
-      }
-
-      function renderMessages(messages) {
-        const inner = document.getElementById("chat-inner");
-        inner.innerHTML =
-          messages.length === 0
-            ? `<div id="empty-state">
+function renderMessages(messages) {
+  const inner = document.getElementById('chat-inner');
+  inner.innerHTML = messages.length === 0 ? `<div id="empty-state">
     <div class="empty-orb"></div>
     <h1 class="empty-title">Forge Your Vision</h1>
     <p class="empty-sub">Describe anything. PixelForge turns your words into stunning imagery — powered by cutting-edge AI.</p>
@@ -2676,57 +2657,48 @@
         <div class="s-emoji">🌌</div><div class="s-title">Cosmic Nebula</div><div class="s-sub">Deep space abstract</div>
       </div>
     </div>
-  </div>`
-            : "";
+  </div>` : '';
+  for (const msg of messages) {
+    if (msg.role === 'user') appendUserMsg(msg.content);
+    else appendAiMsg(msg);
+  }
+}
 
-        for (const msg of messages) {
-          if (msg.role === "user") appendUserMsg(msg.content);
-          else appendAiMsg(msg);
-        }
-      }
+function appendUserMsg(content) {
+  const inner = document.getElementById('chat-inner');
+  const div = document.createElement('div');
+  div.className = 'msg-row user';
+  div.innerHTML = `<div class="msg-avatar user">R</div><div class="msg-bubble"><div class="user-bubble">${escHtml(content)}</div></div>`;
+  inner.appendChild(div);
+}
 
-      function appendUserMsg(content) {
-        const inner = document.getElementById("chat-inner");
-        const div = document.createElement("div");
-        div.className = "msg-row user";
-        div.innerHTML = `
-    <div class="msg-avatar user">R</div>
-    <div class="msg-bubble"><div class="user-bubble">${escHtml(content)}</div></div>
-  `;
-        inner.appendChild(div);
-      }
+function appendTyping(id) {
+  const inner = document.getElementById('chat-inner');
+  const div = document.createElement('div');
+  div.className = 'typing-row';
+  div.id = id;
+  div.innerHTML = `<div class="msg-avatar ai">PF</div><div class="typing-bubble"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
+  inner.appendChild(div);
+}
 
-      function appendTyping(id) {
-        const inner = document.getElementById("chat-inner");
-        const div = document.createElement("div");
-        div.className = "typing-row";
-        div.id = id;
-        div.innerHTML = `
-    <div class="msg-avatar ai">PF</div>
-    <div class="typing-bubble"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>
-  `;
-        inner.appendChild(div);
-      }
-
-      function appendAiMsg(msg) {
-        const inner = document.getElementById("chat-inner");
-        const div = document.createElement("div");
-        div.className = "msg-row";
-        const mid = "msg_" + msg.ts;
-        div.innerHTML = `
+function appendAiMsg(msg) {
+  const inner = document.getElementById('chat-inner');
+  const div = document.createElement('div');
+  div.className = 'msg-row';
+  const mid = 'msg_' + msg.ts;
+  div.innerHTML = `
     <div class="msg-avatar ai">PF</div>
     <div class="msg-bubble" style="max-width:80%">
       <div class="ai-bubble">
         <div class="ai-img-header">
           <div class="model-tag">
             <div class="model-dot" style="width:6px;height:6px"></div>
-            Generated with <span>${escHtml(msg.model || "FLUX")}</span>
+            Generated with <span>${escHtml(msg.model || 'FLUX')}</span>
           </div>
         </div>
         <div class="img-wrapper">
           <div class="img-skeleton" id="skel_${mid}"></div>
-          <img id="${mid}" class="gen-img" style="display:none" alt="Generated image"
-            onload="imgLoaded('${mid}')" onerror="imgError('${mid}', '${escAttr(msg.imgUrl)}')" />
+          <img id="${mid}" class="gen-img" style="display:none" alt="Generated image" />
         </div>
         <div class="ai-img-footer">
           <span class="prompt-tag">"${escHtml(msg.prompt)}"</span>
@@ -2744,307 +2716,109 @@
           </button>
         </div>
       </div>
-    </div>
-  `;
-        inner.appendChild(div);
+    </div>`;
+  inner.appendChild(div);
 
-        // Start loading image
-        const img = document.getElementById(id);
-smartLoad(img, msg.imgUrl, msg.enhancedPrompt, mid);
-
-      const MODEL_FALLBACKS = ['flux-schnell', 'gemini-fast'];
-
-async function smartLoad(img, originalUrl, prompt, mid, attempt = 0) {
-  const model = MODEL_FALLBACKS[Math.min(attempt, MODEL_FALLBACKS.length - 1)];
-  const seed = Date.now() + Math.floor(Math.random() * 9999999);
-
-  // Stage 1: no key (free, unlimited)
-  // Stage 2: with API key (only if stage 1 failed)
-  const useKey = attempt >= MODEL_FALLBACKS.length;
-  const API_KEY = 'sk_KdVQD7TO5iEBCNjOkyXdTdS8zPJfjssm';
-
-  let url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?model=${model}&width=1024&height=1024&seed=${seed}&nologo=true`;
-  if (useKey) url += `&key=${API_KEY}`;
-
-  const timeout = setTimeout(() => {
-    img.src = '';
-    if (attempt < MODEL_FALLBACKS.length) {
-      showToast(`⚡ Busy — retrying with backup...`);
-      smartLoad(img, originalUrl, prompt, mid, attempt + 1);
-    } else if (!useKey) {
-      showToast(`🔑 Switching to priority mode...`);
-      smartLoad(img, originalUrl, prompt, mid, attempt + 1);
-    } else {
-      imgFinalError(mid);
-    }
-  }, 8000);
-
-  img.onload = () => {
-    clearTimeout(timeout);
-    const skel = document.getElementById('skel_' + mid);
-    if (skel) skel.remove();
-    img.style.display = 'block';
-    scrollToBottom();
-  };
-
-  img.onerror = () => {
-    clearTimeout(timeout);
-    if (attempt < MODEL_FALLBACKS.length - 1) {
-      showToast(`⚡ Switching model...`);
-      smartLoad(img, originalUrl, prompt, mid, attempt + 1);
-    } else if (!useKey) {
-      showToast(`🔑 Switching to priority mode...`);
-      smartLoad(img, originalUrl, prompt, mid, MODEL_FALLBACKS.length);
-    } else {
-      imgFinalError(mid);
-    }
-  };
-
-  img.src = url;
+  // ✅ THIS is the correct way — mid not id
+  const img = document.getElementById(mid);
+  smartLoad(img, msg.imgUrl, msg.enhancedPrompt, mid);
 }
 
-function imgFinalError(mid) {
-  const skel = document.getElementById('skel_' + mid);
-  if (skel) skel.innerHTML = `<div style="height:200px;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:13px;flex-direction:column;gap:8px">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="28" height="28"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-    All servers busy. Please try again shortly.</div>`;
-    }
-      function regenerate(prompt) {
-        document.getElementById("prompt-input").value = prompt;
-        generate();
-      }
+function regenerate(prompt) {
+  document.getElementById('prompt-input').value = prompt;
+  generate();
+}
 
-      // ========== ENHANCE PROMPT ==========
-      async function enhancePrompt() {
-        const input = document.getElementById("prompt-input");
-        const val = input.value.trim();
-        if (!val) return;
-        const suffix =
-          presetSuffixes[currentPreset] ||
-          "ultra realistic, cinematic lighting, 8k, highly detailed";
-        input.value = val + ", " + suffix;
-        autoResize(input);
-        showToast("✨ Prompt enhanced!");
-      }
+// ========== ENHANCE PROMPT ==========
+async function enhancePrompt() {
+  const input = document.getElementById('prompt-input');
+  const val = input.value.trim();
+  if (!val) return;
+  const suffix = presetSuffixes[currentPreset] || 'ultra realistic, cinematic lighting, 8k, highly detailed';
+  input.value = val + ', ' + suffix;
+  autoResize(input);
+  showToast('✨ Prompt enhanced!');
+}
 
-      // ========== SETTINGS ==========
-      function toggleSettings() {
-        settingsOpen = !settingsOpen;
-        document
-          .getElementById("settings-panel")
-          .classList.toggle("open", settingsOpen);
-      }
+// ========== SETTINGS ==========
+function toggleSettings() {
+  settingsOpen = !settingsOpen;
+  document.getElementById('settings-panel').classList.toggle('open', settingsOpen);
+}
+function setPreset(name) {
+  currentPreset = name;
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('preset-' + name);
+  if (btn) btn.classList.add('active');
+}
+function updateSlider(name) {
+  const val = document.getElementById(name + '-slider').value;
+  document.getElementById(name + '-val').textContent = val;
+}
 
-      function setPreset(name) {
-        currentPreset = name;
-        document
-          .querySelectorAll(".preset-btn")
-          .forEach((b) => b.classList.remove("active"));
-        const btn = document.getElementById("preset-" + name);
-        if (btn) btn.classList.add("active");
-      }
-
-      function updateSlider(name) {
-        const val = document.getElementById(name + "-slider").value;
-        document.getElementById(name + "-val").textContent = val;
-      }
-
-      // ========== UTILS ==========
-      function injectPrompt(text) {
-        document.getElementById("prompt-input").value = text;
-        autoResize(document.getElementById("prompt-input"));
-        document.getElementById("prompt-input").focus();
-      }
-
-      function appendStyle(style) {
-        const input = document.getElementById("prompt-input");
-        const v = input.value.trim();
-        input.value = v ? v + ", " + style : style;
-        autoResize(input);
-        input.focus();
-      }
-
-      function handleKey(e) {
-        if (e.key === "Enter" && !e.shiftKey) {
-          e.preventDefault();
-          generate();
-        }
-      }
-
-      function autoResize(el) {
-        el.style.height = "auto";
-        el.style.height = Math.min(el.scrollHeight, 160) + "px";
-      }
-
-      function scrollToBottom() {
-        const area = document.getElementById("chat-area");
-        area.scrollTop = area.scrollHeight;
-      }
-
-      function delay(ms) {
-        return new Promise((r) => setTimeout(r, ms));
-      }
-
-      function escHtml(s) {
-        return String(s)
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;");
-      }
-      function escAttr(s) {
-        return String(s).replace(/'/g, "\\'");
-      }
-
-      function copyPrompt(prompt) {
-        navigator.clipboard
-          .writeText(prompt)
-          .then(() => showToast("✅ Prompt copied!"));
-      }
-
-      function showToast(msg) {
-        const t = document.getElementById("toast");
-        t.textContent = msg;
-        t.classList.add("show");
-        setTimeout(() => t.classList.remove("show"), 2200);
-      }
-
-      async function downloadImg(url, id) {
-        try {
-          showToast("⬇️ Downloading...");
-          const res = await fetch(url);
-          const blob = await res.blob();
-          const a = document.createElement("a");
-          a.href = URL.createObjectURL(blob);
-          a.download = "pixelforge_" + Date.now() + ".jpg";
-          a.click();
-          URL.revokeObjectURL(a.href);
-        } catch {
-          // fallback: open in new tab
-          window.open(url, "_blank");
-        }
-      }
-
-      function toggleSidebar() {
-        const sb = document.getElementById("sidebar");
-        const ov = document.getElementById("sidebar-overlay");
-        sb.classList.toggle("mobile-open");
-        ov.classList.toggle("show");
-      }
+// ========== UTILS ==========
+function injectPrompt(text) {
+  document.getElementById('prompt-input').value = text;
+  autoResize(document.getElementById('prompt-input'));
+  document.getElementById('prompt-input').focus();
+}
+function appendStyle(style) {
+  const input = document.getElementById('prompt-input');
+  const v = input.value.trim();
+  input.value = v ? v + ', ' + style : style;
+  autoResize(input);
+  input.focus();
+}
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); generate(); }
+}
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+}
+function scrollToBottom() {
+  const area = document.getElementById('chat-area');
+  area.scrollTop = area.scrollHeight;
+}
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(s) { return String(s).replace(/'/g, "\\'"); }
+function copyPrompt(prompt) {
+  navigator.clipboard.writeText(prompt).then(() => showToast('✅ Prompt copied!'));
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+async function downloadImg(url, id) {
+  try {
+    showToast('⬇️ Downloading...');
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'pixelforge_' + Date.now() + '.jpg';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch {
+    window.open(url, '_blank');
+  }
+}
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sidebar-overlay');
+  sb.classList.toggle('mobile-open');
+  ov.classList.toggle('show');
+}   
 
       // ========== 3D BACKGROUND ==========
       (function initThree() {
         const canvas = document.getElementById("bg-canvas");
-        const renderer = new THREE.WebGLRenderer({
-          canvas,
-          antialias: true,
-          alpha: true,
-        });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setClearColor(0x000000, 0);
-
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(
-          60,
-          window.innerWidth / window.innerHeight,
-          0.1,
-          1000,
-        );
-        camera.position.set(0, 0, 30);
-
-        // Particles
-        const count = 1200;
-        const positions = new Float32Array(count * 3);
-        const sizes = new Float32Array(count);
-        for (let i = 0; i < count; i++) {
-          positions[i * 3] = (Math.random() - 0.5) * 120;
-          positions[i * 3 + 1] = (Math.random() - 0.5) * 80;
-          positions[i * 3 + 2] = (Math.random() - 0.5) * 60;
-          sizes[i] = Math.random() * 2 + 0.5;
-        }
-
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-        geo.setAttribute("size", new THREE.BufferAttribute(sizes, 1));
-
-        const mat = new THREE.PointsMaterial({
-          color: 0x7c6af7,
-          size: 0.35,
-          transparent: true,
-          opacity: 0.5,
-          sizeAttenuation: true,
-          depthWrite: false,
-        });
-        const particles = new THREE.Points(geo, mat);
-        scene.add(particles);
-
-        // Floating geometric shapes
-        const shapes = [];
-        const shapeGeos = [
-          new THREE.IcosahedronGeometry(2, 0),
-          new THREE.OctahedronGeometry(1.5, 0),
-          new THREE.TetrahedronGeometry(1.8, 0),
-        ];
-        for (let i = 0; i < 5; i++) {
-          const geo2 = shapeGeos[i % shapeGeos.length];
-          const mat2 = new THREE.MeshBasicMaterial({
-            color: i % 2 === 0 ? 0x7c6af7 : 0xa891ff,
-            wireframe: true,
-            transparent: true,
-            opacity: 0.08,
-          });
-          const mesh = new THREE.Mesh(geo2, mat2);
-          mesh.position.set(
-            (Math.random() - 0.5) * 50,
-            (Math.random() - 0.5) * 30,
-            (Math.random() - 0.5) * 20 - 10,
-          );
-          mesh.userData = {
-            speed: Math.random() * 0.003 + 0.001,
-            rotX: Math.random() * 0.002,
-            rotY: Math.random() * 0.003,
-          };
-          shapes.push(mesh);
-          scene.add(mesh);
-        }
-
-        // Mouse parallax
-        let mouseX = 0,
-          mouseY = 0;
-        document.addEventListener("mousemove", (e) => {
-          mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
-          mouseY = -(e.clientY / window.innerHeight - 0.5) * 2;
-        });
-
-        let t = 0;
-        function animate() {
-          requestAnimationFrame(animate);
-          t += 0.004;
-
-          particles.rotation.y = t * 0.05 + mouseX * 0.05;
-          particles.rotation.x = t * 0.02 + mouseY * 0.03;
-
-          shapes.forEach((s) => {
-            s.rotation.x += s.userData.rotX;
-            s.rotation.y += s.userData.rotY;
-            s.position.y += Math.sin(t + s.position.x) * 0.01;
-          });
-
-          camera.position.x += (mouseX * 2 - camera.position.x) * 0.02;
-          camera.position.y += (mouseY * 1 - camera.position.y) * 0.02;
-          camera.lookAt(scene.position);
-
-          renderer.render(scene, camera);
-        }
-        animate();
-
-        window.addEventListener("resize", () => {
-          camera.aspect = window.innerWidth / window.innerHeight;
-          camera.updateProjectionMatrix();
-          renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-      })();
+        const render
     </script>
   </body>
 </html>
