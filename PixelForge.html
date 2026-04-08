@@ -2485,9 +2485,14 @@ function smartLoad(img, originalUrl, prompt, mid, attempt) {
   const useKey = attempt >= MODEL_FALLBACKS.length;
   const API_KEY = 'sk_KdVQD7TO5iEBCNjOkyXdTdS8zPJfjssm';
 
-  let url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) + '?model=' + model + '&width=1024&height=1024&seed=' + seed + '&nologo=true';
-  if (useKey) url += '&key=' + API_KEY;
+  let url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt) + 
+  '?model=' + model + '&width=1024&height=1024&seed=' + seed + '&nologo=true';
 
+if (useKey) {
+  url = 'https://gen.pollinations.ai/image/prompt/' + encodeURIComponent(prompt) + 
+    '?model=' + model + '&width=1024&height=1024&seed=' + seed + 
+    '&nologo=true&key=' + API_KEY;
+}
   const timeout = setTimeout(function() {
     img.src = '';
     if (attempt < MODEL_FALLBACKS.length) {
