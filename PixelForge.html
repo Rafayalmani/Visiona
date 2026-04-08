@@ -2402,36 +2402,26 @@
 
     <script>
 
-      document.addEventListener('DOMContentLoaded', function() {
-    const inputArea = document.getElementById('input-area');
-    const chatArea = document.getElementById('chat-area');
-    const promptInput = document.getElementById('prompt-input');
-        if (promptInput) {
-      promptInput.addEventListener('focus', function() {
-        setTimeout(function() {
-          if (chatArea) {
-            chatArea.scrollTop = chatArea.scrollHeight;
-          }
-        }, 300);
-      });
-    }
-    
-    // Handle window resize (keyboard opening/closing)
-    let originalHeight = window.innerHeight;
-    window.addEventListener('resize', function() {
-      if (window.innerHeight < originalHeight) {
-        // Keyboard opened
-        if (chatArea) {
-          setTimeout(function() {
-            chatArea.scrollTop = chatArea.scrollHeight;
-          }, 100);
-        }
-      }
-      originalHeight = window.innerHeight;
+     document.addEventListener('DOMContentLoaded', function() {
+  const chatArea = document.getElementById('chat-area');
+  const promptInput = document.getElementById('prompt-input');
+  if (promptInput) {
+    promptInput.addEventListener('focus', function() {
+      setTimeout(function() {
+        if (chatArea) chatArea.scrollTop = chatArea.scrollHeight;
+      }, 300);
     });
+  }
+  let originalHeight = window.innerHeight;
+  window.addEventListener('resize', function() {
+    if (window.innerHeight < originalHeight) {
+      if (chatArea) setTimeout(function() { chatArea.scrollTop = chatArea.scrollHeight; }, 100);
+    }
+    originalHeight = window.innerHeight;
   });
-      
-       // ========== STATE ==========
+});
+
+// ========== STATE ==========
 let chats = JSON.parse(localStorage.getItem('pf_chats') || '[]');
 let currentChatId = null;
 let isGenerating = false;
@@ -2457,7 +2447,7 @@ document.getElementById('model-pill-label').textContent = currentModelLabel;
 document.querySelectorAll('.model-option').forEach(o => o.classList.remove('active'));
 const activeOpt = document.getElementById('opt-' + currentModel);
 if (activeOpt) activeOpt.classList.add('active');
-document.addEventListener('click', (e) => {
+document.addEventListener('click', function(e) {
   if (!document.getElementById('model-switcher').contains(e.target)) closeModelDropdown();
 });
 
@@ -2485,7 +2475,7 @@ function selectModel(id, label) {
   showToast('🤖 Switched to ' + label);
 }
 
-// ========== SMART LOAD (defined here, at top level) ==========
+// ========== SMART LOAD ==========
 const MODEL_FALLBACKS = ['flux-schnell', 'gemini-fast'];
 
 function smartLoad(img, originalUrl, prompt, mid, attempt) {
@@ -2565,7 +2555,7 @@ function renderSidebarHistory() {
     el.innerHTML = '<div style="padding:12px 12px;font-size:12.5px;color:var(--text3);">No sessions yet. Start creating!</div>';
     return;
   }
-  el.innerHTML = chats.map(c => `
+  el.innerHTML = chats.map(function(c) { return `
     <div class="history-item ${c.id === currentChatId ? 'active' : ''}" onclick="loadChat('${c.id}')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg>
       <span>${escHtml(c.title || 'Untitled')}</span>
@@ -2573,10 +2563,10 @@ function renderSidebarHistory() {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </span>
     </div>
-  `).join('');
+  `; }).join('');
 }
 function deleteChat(id) {
-  chats = chats.filter(c => c.id !== id);
+  chats = chats.filter(function(c) { return c.id !== id; });
   save();
   if (currentChatId === id) newChat();
   else renderSidebarHistory();
@@ -2619,7 +2609,7 @@ async function generate() {
   chat.messages.push(userMsg);
   document.getElementById('chat-title').textContent = chat.title;
   document.getElementById('chat-count').textContent = chat.messages.length + ' generation' + (chat.messages.length !== 1 ? 's' : '');
-  document.getElementById('empty-state')?.remove();
+  document.getElementById('empty-state') && document.getElementById('empty-state').remove();
   const seed = Date.now() + Math.floor(Math.random() * 999999);
   const imgUrl = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(enhanced) + '?model=' + currentModel + '&width=1024&height=1024&seed=' + seed + '&nologo=true';
   appendUserMsg(rawPrompt);
@@ -2627,8 +2617,9 @@ async function generate() {
   appendTyping(typingId);
   scrollToBottom();
   await delay(900);
-  document.getElementById(typingId)?.remove();
-  const aiMsg = { role: 'ai', prompt: rawPrompt, enhancedPrompt: enhanced, imgUrl, ts: Date.now(), seed, model: currentModelLabel };
+  const typingEl = document.getElementById(typingId);
+  if (typingEl) typingEl.remove();
+  const aiMsg = { role: 'ai', prompt: rawPrompt, enhancedPrompt: enhanced, imgUrl: imgUrl, ts: Date.now(), seed: seed, model: currentModelLabel };
   chat.messages.push(aiMsg);
   save();
   appendAiMsg(aiMsg);
@@ -2639,28 +2630,10 @@ async function generate() {
 
 function renderMessages(messages) {
   const inner = document.getElementById('chat-inner');
-  inner.innerHTML = messages.length === 0 ? `<div id="empty-state">
-    <div class="empty-orb"></div>
-    <h1 class="empty-title">Forge Your Vision</h1>
-    <p class="empty-sub">Describe anything. PixelForge turns your words into stunning imagery — powered by cutting-edge AI.</p>
-    <div class="suggestions-grid">
-      <div class="suggestion-card" onclick="injectPrompt('A futuristic cyberpunk city at night with neon lights reflecting on wet streets')">
-        <div class="s-emoji">🌆</div><div class="s-title">Cyberpunk City</div><div class="s-sub">Neon-soaked night skyline</div>
-      </div>
-      <div class="suggestion-card" onclick="injectPrompt('Ethereal fantasy forest with glowing mushrooms and mystical creatures')">
-        <div class="s-emoji">🍄</div><div class="s-title">Enchanted Forest</div><div class="s-sub">Mystical glowing wilderness</div>
-      </div>
-      <div class="suggestion-card" onclick="injectPrompt('Anime warrior girl with silver hair wielding a glowing katana in a storm')">
-        <div class="s-emoji">⚔️</div><div class="s-title">Anime Warrior</div><div class="s-sub">Epic battle scene</div>
-      </div>
-      <div class="suggestion-card" onclick="injectPrompt('Abstract cosmic nebula with swirling galaxies and vibrant colors in deep space')">
-        <div class="s-emoji">🌌</div><div class="s-title">Cosmic Nebula</div><div class="s-sub">Deep space abstract</div>
-      </div>
-    </div>
-  </div>` : '';
-  for (const msg of messages) {
-    if (msg.role === 'user') appendUserMsg(msg.content);
-    else appendAiMsg(msg);
+  inner.innerHTML = messages.length === 0 ? '<div id="empty-state"><div class="empty-orb"></div><h1 class="empty-title">Forge Your Vision</h1><p class="empty-sub">Describe anything. PixelForge turns your words into stunning imagery — powered by cutting-edge AI.</p><div class="suggestions-grid"><div class="suggestion-card" onclick="injectPrompt(\'A futuristic cyberpunk city at night with neon lights reflecting on wet streets\')"><div class="s-emoji">🌆</div><div class="s-title">Cyberpunk City</div><div class="s-sub">Neon-soaked night skyline</div></div><div class="suggestion-card" onclick="injectPrompt(\'Ethereal fantasy forest with glowing mushrooms and mystical creatures\')"><div class="s-emoji">🍄</div><div class="s-title">Enchanted Forest</div><div class="s-sub">Mystical glowing wilderness</div></div><div class="suggestion-card" onclick="injectPrompt(\'Anime warrior girl with silver hair wielding a glowing katana in a storm\')"><div class="s-emoji">⚔️</div><div class="s-title">Anime Warrior</div><div class="s-sub">Epic battle scene</div></div><div class="suggestion-card" onclick="injectPrompt(\'Abstract cosmic nebula with swirling galaxies and vibrant colors in deep space\')"><div class="s-emoji">🌌</div><div class="s-title">Cosmic Nebula</div><div class="s-sub">Deep space abstract</div></div></div></div>' : '';
+  for (var i = 0; i < messages.length; i++) {
+    if (messages[i].role === 'user') appendUserMsg(messages[i].content);
+    else appendAiMsg(messages[i]);
   }
 }
 
@@ -2668,7 +2641,7 @@ function appendUserMsg(content) {
   const inner = document.getElementById('chat-inner');
   const div = document.createElement('div');
   div.className = 'msg-row user';
-  div.innerHTML = `<div class="msg-avatar user">R</div><div class="msg-bubble"><div class="user-bubble">${escHtml(content)}</div></div>`;
+  div.innerHTML = '<div class="msg-avatar user">R</div><div class="msg-bubble"><div class="user-bubble">' + escHtml(content) + '</div></div>';
   inner.appendChild(div);
 }
 
@@ -2677,7 +2650,7 @@ function appendTyping(id) {
   const div = document.createElement('div');
   div.className = 'typing-row';
   div.id = id;
-  div.innerHTML = `<div class="msg-avatar ai">PF</div><div class="typing-bubble"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
+  div.innerHTML = '<div class="msg-avatar ai">PF</div><div class="typing-bubble"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
   inner.appendChild(div);
 }
 
@@ -2686,40 +2659,38 @@ function appendAiMsg(msg) {
   const div = document.createElement('div');
   div.className = 'msg-row';
   const mid = 'msg_' + msg.ts;
-  div.innerHTML = `
-    <div class="msg-avatar ai">PF</div>
-    <div class="msg-bubble" style="max-width:80%">
-      <div class="ai-bubble">
-        <div class="ai-img-header">
-          <div class="model-tag">
-            <div class="model-dot" style="width:6px;height:6px"></div>
-            Generated with <span>${escHtml(msg.model || 'FLUX')}</span>
-          </div>
-        </div>
-        <div class="img-wrapper">
-          <div class="img-skeleton" id="skel_${mid}"></div>
-          <img id="${mid}" class="gen-img" style="display:none" alt="Generated image" />
-        </div>
-        <div class="ai-img-footer">
-          <span class="prompt-tag">"${escHtml(msg.prompt)}"</span>
-          <button class="action-btn" onclick="downloadImg('${escAttr(msg.imgUrl)}', '${mid}')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Download
-          </button>
-          <button class="action-btn" onclick="copyPrompt('${escAttr(msg.prompt)}')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            Copy Prompt
-          </button>
-          <button class="action-btn primary" onclick="regenerate('${escAttr(msg.prompt)}')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-            Regenerate
-          </button>
-        </div>
-      </div>
-    </div>`;
+  div.innerHTML =
+    '<div class="msg-avatar ai">PF</div>' +
+    '<div class="msg-bubble" style="max-width:80%">' +
+      '<div class="ai-bubble">' +
+        '<div class="ai-img-header">' +
+          '<div class="model-tag">' +
+            '<div class="model-dot" style="width:6px;height:6px"></div>' +
+            'Generated with <span>' + escHtml(msg.model || 'FLUX') + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="img-wrapper">' +
+          '<div class="img-skeleton" id="skel_' + mid + '"></div>' +
+          '<img id="' + mid + '" class="gen-img" style="display:none" alt="Generated image" />' +
+        '</div>' +
+        '<div class="ai-img-footer">' +
+          '<span class="prompt-tag">"' + escHtml(msg.prompt) + '"</span>' +
+          '<button class="action-btn" onclick="downloadImg(\'' + escAttr(msg.imgUrl) + '\',\'' + mid + '\')">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
+            'Download' +
+          '</button>' +
+          '<button class="action-btn" onclick="copyPrompt(\'' + escAttr(msg.prompt) + '\')">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
+            'Copy Prompt' +
+          '</button>' +
+          '<button class="action-btn primary" onclick="regenerate(\'' + escAttr(msg.prompt) + '\')">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>' +
+            'Regenerate' +
+          '</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
   inner.appendChild(div);
-
-  // ✅ THIS is the correct way — mid not id
   const img = document.getElementById(mid);
   smartLoad(img, msg.imgUrl, msg.enhancedPrompt, mid);
 }
@@ -2730,7 +2701,7 @@ function regenerate(prompt) {
 }
 
 // ========== ENHANCE PROMPT ==========
-async function enhancePrompt() {
+function enhancePrompt() {
   const input = document.getElementById('prompt-input');
   const val = input.value.trim();
   if (!val) return;
@@ -2747,7 +2718,7 @@ function toggleSettings() {
 }
 function setPreset(name) {
   currentPreset = name;
-  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.preset-btn').forEach(function(b) { b.classList.remove('active'); });
   const btn = document.getElementById('preset-' + name);
   if (btn) btn.classList.add('active');
 }
@@ -2780,45 +2751,107 @@ function scrollToBottom() {
   const area = document.getElementById('chat-area');
   area.scrollTop = area.scrollHeight;
 }
-function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+function delay(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-function escAttr(s) { return String(s).replace(/'/g, "\\'"); }
+function escAttr(s) { return String(s).replace(/'/g, '\\\''); }
 function copyPrompt(prompt) {
-  navigator.clipboard.writeText(prompt).then(() => showToast('✅ Prompt copied!'));
+  navigator.clipboard.writeText(prompt).then(function() { showToast('✅ Prompt copied!'); });
 }
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2200);
+  setTimeout(function() { t.classList.remove('show'); }, 2200);
 }
-async function downloadImg(url, id) {
-  try {
-    showToast('⬇️ Downloading...');
-    const res = await fetch(url);
-    const blob = await res.blob();
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'pixelforge_' + Date.now() + '.jpg';
-    a.click();
-    URL.revokeObjectURL(a.href);
-  } catch {
-    window.open(url, '_blank');
-  }
+function downloadImg(url, id) {
+  showToast('⬇️ Downloading...');
+  const a = document.createElement('a');
+  a.href = url;
+  a.target = '_blank';
+  a.download = 'pixelforge_' + Date.now() + '.jpg';
+  a.click();
 }
 function toggleSidebar() {
   const sb = document.getElementById('sidebar');
   const ov = document.getElementById('sidebar-overlay');
   sb.classList.toggle('mobile-open');
   ov.classList.toggle('show');
-}   
+}
 
-      // ========== 3D BACKGROUND ==========
-      (function initThree() {
-        const canvas = document.getElementById("bg-canvas");
-        const render
+// ========== 3D BACKGROUND ==========
+(function initThree() {
+  const canvas = document.getElementById('bg-canvas');
+  if (!canvas) return;
+  const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x000000, 0);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 0, 30);
+
+  const count = 1200;
+  const positions = new Float32Array(count * 3);
+  for (var i = 0; i < count; i++) {
+    positions[i*3]   = (Math.random() - 0.5) * 120;
+    positions[i*3+1] = (Math.random() - 0.5) * 80;
+    positions[i*3+2] = (Math.random() - 0.5) * 60;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const mat = new THREE.PointsMaterial({ color: 0x7c6af7, size: 0.35, transparent: true, opacity: 0.5, sizeAttenuation: true, depthWrite: false });
+  const particles = new THREE.Points(geo, mat);
+  scene.add(particles);
+
+  const shapes = [];
+  const shapeGeos = [
+    new THREE.IcosahedronGeometry(2, 0),
+    new THREE.OctahedronGeometry(1.5, 0),
+    new THREE.TetrahedronGeometry(1.8, 0)
+  ];
+  for (var j = 0; j < 5; j++) {
+    var sg = shapeGeos[j % shapeGeos.length];
+    var sm = new THREE.MeshBasicMaterial({ color: j % 2 === 0 ? 0x7c6af7 : 0xa891ff, wireframe: true, transparent: true, opacity: 0.08 });
+    var mesh = new THREE.Mesh(sg, sm);
+    mesh.position.set((Math.random()-0.5)*50, (Math.random()-0.5)*30, (Math.random()-0.5)*20 - 10);
+    mesh.userData = { rotX: Math.random()*0.002, rotY: Math.random()*0.003 };
+    shapes.push(mesh);
+    scene.add(mesh);
+  }
+
+  var mouseX = 0, mouseY = 0;
+  document.addEventListener('mousemove', function(e) {
+    mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+    mouseY = -(e.clientY / window.innerHeight - 0.5) * 2;
+  });
+
+  var t = 0;
+  function animate() {
+    requestAnimationFrame(animate);
+    t += 0.004;
+    particles.rotation.y = t * 0.05 + mouseX * 0.05;
+    particles.rotation.x = t * 0.02 + mouseY * 0.03;
+    shapes.forEach(function(s) {
+      s.rotation.x += s.userData.rotX;
+      s.rotation.y += s.userData.rotY;
+      s.position.y += Math.sin(t + s.position.x) * 0.01;
+    });
+    camera.position.x += (mouseX * 2 - camera.position.x) * 0.02;
+    camera.position.y += (mouseY * 1 - camera.position.y) * 0.02;
+    camera.lookAt(scene.position);
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  window.addEventListener('resize', function() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+})();
     </script>
   </body>
 </html>
